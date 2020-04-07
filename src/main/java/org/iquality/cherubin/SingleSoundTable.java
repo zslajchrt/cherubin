@@ -4,6 +4,7 @@ import org.japura.gui.CheckComboBox;
 import org.japura.gui.event.ListCheckListener;
 import org.japura.gui.model.ListCheckModel;
 
+import javax.sound.midi.MidiDevice;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableModel;
@@ -16,17 +17,19 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static org.iquality.cherubin.MidiPortCommunicator.findDevice;
+
 public class SingleSoundTable extends JFrame {
     private final JTable table;
     private final SingleSoundTableModel tableModel;
-    private final String midiDeviceInName;
-    private final String midiDeviceOutName;
+    private final MidiDevice midiDeviceIn;
+    private final MidiDevice midiDeviceOut;
 
-    public SingleSoundTable(DbManager dbManager, String midiDeviceInName, String midiDeviceOutName) {
-        super("Waldorf Blofeld Librarian");
+    public SingleSoundTable(DbManager dbManager, MidiDevice midiDeviceIn, MidiDevice midiDeviceOut) {
+        super("Waldorf Blofeld Proxy & Librarian");
 
-        this.midiDeviceInName = midiDeviceInName;
-        this.midiDeviceOutName = midiDeviceOutName;
+        this.midiDeviceIn = midiDeviceIn;
+        this.midiDeviceOut = midiDeviceOut;
 
         tableModel = new SingleSoundTableModel(dbManager);
         table = new JTable(tableModel);
@@ -37,7 +40,7 @@ public class SingleSoundTable extends JFrame {
             public void mouseClicked(MouseEvent e) {
                 if (sender == null) {
                     try {
-                        sender = new SoundSender(midiDeviceOutName);
+                        sender = new SoundSender(midiDeviceOut);
                     } catch (Exception ex) {
                         sender = null;
                         return;
@@ -115,15 +118,6 @@ public class SingleSoundTable extends JFrame {
 //        return listSounds;
 //    }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                new SingleSoundTable(new DbManager("jdbc:h2:/Users/zslajchrt/Music/Waldorf/Blofeld/Cherubin/allsounds;IFEXISTS=TRUE", "zbynek", "Ovation1"), "CoreMIDI4J - IAC Driver Virtual MIDI cable 1", "CoreMIDI4J - IAC Driver Virtual MIDI cable 2").setVisible(true);
-            }
-        });
-    }
-
     protected void addButtons(JToolBar toolBar) {
         JButton button = null;
 
@@ -199,7 +193,7 @@ public class SingleSoundTable extends JFrame {
         JButton button = new JButton();
         button.setActionCommand("captureDump");
         button.setToolTipText("Captures a sound dump");
-        button.setText("Capture Dump");
+        button.setText("Capture");
 
         button.addActionListener(new AbstractAction() {
             final char[] sym = new char[]{'-', '\\', '|', '/'};
@@ -212,7 +206,7 @@ public class SingleSoundTable extends JFrame {
                     String dumpName = JOptionPane.showInputDialog("Please input dump name: ", "Dump-" + System.currentTimeMillis());
                     try {
                         button.setActionCommand("stopDump");
-                        capture = new SoundCapture(midiDeviceInName, dumpName);
+                        capture = new SoundCapture(midiDeviceIn, dumpName);
                         button.setText("Stop");
                         capture.start();
                         capture.addDumpListener(sound -> {
@@ -227,7 +221,7 @@ public class SingleSoundTable extends JFrame {
                     tableModel.addSoundSet(capture.soundSet);
                     capture = null;
                     cnt = 0;
-                    button.setText("Capture Dump");
+                    button.setText("Capture");
                     button.setActionCommand("captureDump");
                 }
             }
@@ -264,4 +258,19 @@ public class SingleSoundTable extends JFrame {
         return ccb;
     }
 
+    public static void main(String[] args) {
+        MidiDevice proxyLeftIn = MidiPortCommunicator.findDevice("VirtualMIDICable1", true);
+        MidiDevice proxyRightOut = MidiPortCommunicator.findDevice("Blofeld", false);
+        MidiDevice proxyLeftOut = findDevice("VirtualMIDICable2", false);
+        MidiDevice proxyRightIn = MidiPortCommunicator.findDevice("Blofeld", true);
+        MidiProxyInterceptor proxyInterceptor = new MidiProxyInterceptor((dir) -> dir == MidiProxy.Direction.rightToLeft);
+        MidiProxy librarianMidiOut = new MidiProxy(proxyLeftIn, proxyLeftOut, proxyRightIn, proxyRightOut, proxyInterceptor);
+
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new SingleSoundTable(new DbManager("jdbc:h2:/Users/zslajchrt/Music/Waldorf/Blofeld/Cherubin/allsounds;IFEXISTS=TRUE", "zbynek", "Ovation1"), proxyInterceptor, proxyRightOut).setVisible(true);
+            }
+        });
+    }
 }

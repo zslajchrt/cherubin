@@ -1,5 +1,6 @@
 package org.iquality.cherubin;
 
+import javax.sound.midi.MidiDevice;
 import javax.sound.midi.Receiver;
 import javax.sound.midi.ShortMessage;
 
@@ -10,8 +11,8 @@ public class SoundSender extends MidiPortCommunicator {
     private final ShortMessage probeNoteOff;
     private final Receiver receiver;
 
-    public SoundSender(String deviceName) {
-        super(deviceName, false);
+    public SoundSender(MidiDevice midiOutPort) {
+        super(midiOutPort);
 
         try {
             probeNoteOn = new ShortMessage();

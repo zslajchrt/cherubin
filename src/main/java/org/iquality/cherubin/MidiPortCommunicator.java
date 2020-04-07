@@ -22,10 +22,7 @@ public class MidiPortCommunicator {
             }
 
             device = findDevice(deviceName, isInput);
-            if (device == null) {
-                throw new RuntimeException((isInput ? "Input " : "Output") + " device " + deviceName + " not found");
-            }
-        } catch (CoreMidiException | MidiUnavailableException e) {
+        } catch (CoreMidiException e) {
             throw new RuntimeException(e);
         }
     }
@@ -34,17 +31,21 @@ public class MidiPortCommunicator {
         return CoreMidiDeviceProvider.isLibraryLoaded();
     }
 
-    static MidiDevice findDevice(String deviceName, boolean midiIn) throws MidiUnavailableException {
-        for (javax.sound.midi.MidiDevice.Info deviceInfo : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
-            if (deviceInfo.getName().equals(deviceName)) {
-                MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
-                int max = midiIn ? device.getMaxTransmitters() : device.getMaxReceivers();
-                if (max != 0) {
-                    return device;
+    public static MidiDevice findDevice(String deviceName, boolean midiIn) {
+        try {
+            for (MidiDevice.Info deviceInfo : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
+                if (deviceInfo.getName().contains(deviceName)) {
+                    MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
+                    int max = midiIn ? device.getMaxTransmitters() : device.getMaxReceivers();
+                    if (max != 0) {
+                        return device;
+                    }
                 }
             }
+            throw new RuntimeException((midiIn ? "Input " : "Output") + " device " + deviceName + " not found");
+        } catch (MidiUnavailableException e) {
+            throw new RuntimeException(e);
         }
-        return null;
     }
 
     public void close() {
