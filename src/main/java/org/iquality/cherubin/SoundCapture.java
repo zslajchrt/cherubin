@@ -81,7 +81,7 @@ public class SoundCapture extends MidiPortCommunicator {
             int catId = msg[SDATA_OFFSET + SINGLE_CAT_OFFSET];
             SoundCategory category = SoundCategory.CATEGORIES[catId];
 
-            SingleSound sound = new SingleSound(soundCounter.getAndIncrement(), soundName, category, message, soundSet);
+            SingleSound sound = new SingleSound(soundCounter.getAndIncrement(), soundName, category, message, soundSet.name);
             singleSoundBank.put(sound.id, sound);
             soundBankByCategory.computeIfAbsent(category, (cat) -> new HashMap<>()).put(soundName, sound);
 

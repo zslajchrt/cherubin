@@ -3,6 +3,7 @@ package org.iquality.cherubin;
 import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
 
 import javax.sound.midi.InvalidMidiDataException;
+import javax.sound.midi.MidiDevice;
 import javax.sound.midi.SysexMessage;
 import java.sql.*;
 import java.util.*;
@@ -15,24 +16,43 @@ import java.util.*;
  * Start Web Console: java -jar ~/.m2/repository/com/h2database/h2/1.4.199/h2-1.4.199.jar -baseDir /Users/zslajchrt/Music/Waldorf/Blofeld/Cherubin
  * User: zbynek
  */
-public class DbManager {
+public class SoundDbModel {
 
+    private final AppModel appModel;
     private final Connection con;
     private final PreparedStatement insertSoundStm;
     private final PreparedStatement loadAllSoundStm;
 
-    public DbManager(String url, String user, String password) {
+    private Map<String, SoundSet<SingleSound>> soundSetsMap = new HashMap<>();
+    private List<SingleSound> sounds = new ArrayList<>();
+
+    public SoundDbModel(AppModel appModel, String url, String user, String password) {
+        this.appModel = appModel;
         try {
             con = DriverManager.getConnection(url, user, password);
             insertSoundStm = con.prepareStatement("INSERT INTO SOUND (NAME, CATEGORY, SYSEX, SOUNDSET) VALUES (?, ?, ?, ?)");
             loadAllSoundStm = con.prepareStatement("SELECT ID, NAME, CATEGORY, SYSEX, SOUNDSET FROM SOUND");
+
+            loadSoundSets();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public Collection<SoundSet<SingleSound>> loadSoundSets() {
-        Map<String, SoundSet<SingleSound>> soundSets = new HashMap<>();
+    public Collection<SoundSet<SingleSound>> getSoundSets() {
+        return Collections.unmodifiableCollection(soundSetsMap.values());
+    }
+
+    public List<SingleSound> getSounds() {
+        return Collections.unmodifiableList(sounds);
+    }
+
+    public MidiDevice getCurrentOutputDevice() {
+        return this.appModel.getCurrentOutputDevice();
+    }
+
+    private void loadSoundSets() {
+        this.soundSetsMap = new HashMap<>();
         try {
             ResultSet resultSet = loadAllSoundStm.executeQuery();
             while (resultSet.next()) {
@@ -44,10 +64,11 @@ public class DbManager {
                 byte[] sysExBytes = sysExBlob.getBytes(0, (int) sysExBlob.length());
                 String soundSetName = resultSet.getString(5);
 
-                SoundSet<SingleSound> soundSet = soundSets.computeIfAbsent(soundSetName, SoundSet::new);
-                new SingleSound(id, name, category, new SysexMessage(sysExBytes, sysExBytes.length), soundSet);
+                SingleSound sound = new SingleSound(id, name, category, new SysexMessage(sysExBytes, sysExBytes.length), soundSetName);
+                SoundSet<SingleSound> soundSet = soundSetsMap.computeIfAbsent(soundSetName, SoundSet::new);
+                soundSet.sounds.add(sound);
+                sounds.add(sound);
             }
-            return soundSets.values();
         } catch (SQLException | InvalidMidiDataException e) {
             throw new RuntimeException(e);
         }
@@ -58,6 +79,7 @@ public class DbManager {
             for (SingleSound sound : soundSet.sounds) {
                 insertSound(sound);
             }
+            loadSoundSets();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -69,9 +91,13 @@ public class DbManager {
         byte[] sysEx = sound.dump.getMessage();
         ByteInputStream sysExStream = new ByteInputStream(sysEx, sysEx.length);
         insertSoundStm.setBinaryStream(3, sysExStream);
-        insertSoundStm.setString(4, sound.soundSet.name);
+        insertSoundStm.setString(4, sound.soundSetName);
         insertSoundStm.executeUpdate();
         insertSoundStm.clearParameters();
+    }
+
+    public SingleSound getInitSound() {
+        return sounds.get(0); // TODO: Use a sysex constant
     }
 
     public void close() {
@@ -104,4 +130,12 @@ public class DbManager {
         }
     }
 
+    public MultiSound getInitMulti() {
+        try {
+            byte[] data = new byte[]{(byte) 0xF0, 0, 0, 0, 0, 0, 0, 0}; // TODO: remove the fake data
+            return new MultiSound(0, "Init Multi", new SysexMessage(data, data.length), "");
+        } catch (InvalidMidiDataException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

@@ -4,13 +4,13 @@ import javax.sound.midi.SysexMessage;
 
 public class MultiSound extends Sound {
 
-    public MultiSound(int id, String name, SysexMessage dump, SoundSet soundSet) {
-        super(id, name, dump, soundSet);
+    public MultiSound(int id, String name, SysexMessage dump, String soundSetName) {
+        super(id, name, dump, soundSetName);
     }
 
     @Override
-    protected MultiSound newInstance(int id, String name, SysexMessage dump, SoundSet soundSet) {
-        return new MultiSound(id, name, dump, soundSet);
+    protected MultiSound newInstance(int id, String name, SysexMessage dump, String soundSetName) {
+        return new MultiSound(id, name, dump, soundSetName);
     }
 
     @Override

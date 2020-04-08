@@ -9,15 +9,14 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class SingleSoundTableModel extends AbstractTableModel {
+public class SoundDbTableModel extends AbstractTableModel {
     public static final int COLUMN_ID = 0;
     public static final int COLUMN_NAME = 1;
     public static final int COLUMN_CATEGORY = 2;
     public static final int COLUMN_SOUNDSET = 3;
 
-    private final DbManager dbManager;
+    private final SoundDbModel soundDbModel;
     private final String[] columnNames = {"Id", "Name", "Category", "Sound Set"};
-    private Collection<SoundSet<SingleSound>> soundSets;
     private List<SingleSound> listSounds;
     private Predicate<SingleSound> categoryFilter = s -> true;
     private Predicate<SoundSet<SingleSound>> soundSetFilter = s -> true;
@@ -25,10 +24,13 @@ public class SingleSoundTableModel extends AbstractTableModel {
     private final List<Consumer<Iterable<SoundSet<SingleSound>>>> soundSetsListeners = Collections.synchronizedList(new ArrayList<>());
     private final List<Consumer<Iterable<SoundCategory>>> categoriesListeners = Collections.synchronizedList(new ArrayList<>());
 
-    public SingleSoundTableModel(DbManager dbManager) {
-        this.dbManager = dbManager;
-        this.soundSets = dbManager.loadSoundSets();
+    private final SoundSender soundSender;
+
+    public SoundDbTableModel(SoundDbModel dbModel) {
+        this.soundDbModel = dbModel;
         applyFiltersList();
+
+        this.soundSender = new SoundSender(soundDbModel.getCurrentOutputDevice());
     }
 
     @Override
@@ -69,7 +71,7 @@ public class SingleSoundTableModel extends AbstractTableModel {
                 returnValue = sound.category;
                 break;
             case COLUMN_SOUNDSET:
-                returnValue = sound.soundSet.name;
+                returnValue = sound.soundSetName;
                 break;
             default:
                 throw new IllegalArgumentException("Invalid column index");
@@ -82,7 +84,7 @@ public class SingleSoundTableModel extends AbstractTableModel {
     }
 
     private void applyFiltersList() {
-        listSounds = soundSets.stream().filter(soundSetFilter).map(soundSet -> soundSet.sounds.stream().filter(categoryFilter)).flatMap(s -> s).collect(Collectors.toList());
+        listSounds = soundDbModel.getSoundSets().stream().filter(soundSetFilter).map(soundSet -> soundSet.sounds.stream().filter(categoryFilter)).flatMap(s -> s).collect(Collectors.toList());
         fireTableDataChanged();
     }
 
@@ -125,8 +127,7 @@ public class SingleSoundTableModel extends AbstractTableModel {
     }
 
     public void addSoundSet(SoundSet<SingleSound> soundSet) {
-        dbManager.insertSoundSet(soundSet);
-        soundSets = dbManager.loadSoundSets();
+        soundDbModel.insertSoundSet(soundSet);
         applyFiltersList();
         fireSoundSetsChanged();
     }
@@ -144,7 +145,7 @@ public class SingleSoundTableModel extends AbstractTableModel {
 
     private void fireSoundSetsChanged() {
         for (Consumer<Iterable<SoundSet<SingleSound>>> soundSetsListener : soundSetsListeners) {
-            soundSetsListener.accept(soundSets);
+            soundSetsListener.accept(soundDbModel.getSoundSets());
         }
     }
 
@@ -157,6 +158,16 @@ public class SingleSoundTableModel extends AbstractTableModel {
     }
 
     public void close() {
-        this.dbManager.close();
+        this.soundDbModel.close();
+    }
+
+    public void sendSoundOn(SingleSound sound) {
+        soundSender.probeNoteOff();
+        soundSender.sendSound(sound);
+        soundSender.probeNoteOn();
+    }
+
+    public void sendSoundOff() {
+        soundSender.probeNoteOff();
     }
 }
