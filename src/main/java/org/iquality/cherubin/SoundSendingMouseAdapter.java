@@ -1,0 +1,41 @@
+package org.iquality.cherubin;
+
+import javax.swing.*;
+import java.awt.event.InputEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+
+public abstract class SoundSendingMouseAdapter extends MouseAdapter {
+
+    protected abstract SingleSound getValueAt(int row, int column);
+
+    protected abstract void sendSound(SingleSound sound, AppModel.OutputDirection direction);
+
+    protected abstract void sendSoundOn(SingleSound sound);
+
+    protected abstract void sendSoundOff();
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        if (e.getClickCount() == 2) {
+            JTable target = (JTable) e.getSource();
+            int row = target.getSelectedRow();
+            int column = SoundDbTableModel.COLUMN_NAME;
+            SingleSound sound = (SingleSound) getValueAt(row, column);
+
+            if ((e.getModifiersEx() & (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) == (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) {
+                sendSound(sound, AppModel.OutputDirection.both);
+            } else if ((e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK) {
+                sendSound(sound, AppModel.OutputDirection.left);
+            } else if ((e.getModifiersEx() & InputEvent.ALT_DOWN_MASK) == InputEvent.ALT_DOWN_MASK) {
+                sendSound(sound, AppModel.OutputDirection.right);
+            } else {
+                sendSoundOn(sound);
+            }
+        }
+        if (e.getClickCount() == 1) {
+            //tableModel.sendSoundOff();
+            sendSoundOff();
+        }
+    }
+}

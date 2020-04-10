@@ -25,30 +25,25 @@ public class MidiProxy {
     private final MidiDevice rightOut;
     private final Receiver rightOutReceiver;
 
-    public MidiProxy(MidiDevice leftIn, MidiDevice leftOut, MidiDevice rightIn, MidiDevice rightOut) {
-        this(leftIn, leftOut, rightIn, rightOut, (msg, ts, dir) -> msg);
+    public MidiProxy(AppModel appModel) {
+        this(appModel, (msg, ts, dir) -> msg);
     }
 
-    public MidiProxy(MidiDevice leftIn, MidiDevice leftOut, MidiDevice rightIn, MidiDevice rightOut, MidiProxyListener listener) {
-        this.leftIn = leftIn;
-        this.leftOut = leftOut;
-        this.rightIn = rightIn;
-        this.rightOut = rightOut;
+    public MidiProxy(AppModel appModel, MidiProxyListener listener) {
+        this.leftIn = appModel.getInputDevice(AppModel.InputDirection.left);
+        this.leftOut = appModel.getOutputDevice(AppModel.OutputDirection.left);
+        this.rightIn = appModel.getInputDevice(AppModel.InputDirection.right);
+        this.rightOut = appModel.getOutputDevice(AppModel.OutputDirection.right);
 
         try {
-            this.leftIn.open();
-            this.leftOut.open();
-            this.rightIn.open();
-            this.rightOut.open();
-
             leftInTransmitter = leftIn.getTransmitter();
             rightInTransmitter = rightIn.getTransmitter();
+
             leftOutReceiver = leftOut.getReceiver();
             rightOutReceiver = rightOut.getReceiver();
 
             leftInTransmitter.setReceiver(new CapturingReceiver(rightOutReceiver, Direction.leftToRight, listener));
             rightInTransmitter.setReceiver(new CapturingReceiver(leftOutReceiver, Direction.rightToLeft, listener));
-
         } catch (MidiUnavailableException e) {
             throw new RuntimeException(e);
         }
@@ -97,32 +92,5 @@ public class MidiProxy {
         public void close() {
             receiver.close();
         }
-    }
-
-    public static void main(String[] args) {
-        MidiProxy midiProxy = new MidiProxy(
-                findDevice("VirtualMIDICable1", true),
-                findDevice("VirtualMIDICable2", false),
-                findDevice("Blofeld", true),
-                findDevice("Blofeld", false),
-                (message, timeStamp, direction) -> {
-                    switch (direction) {
-                        case leftToRight:
-                            System.out.print('>');
-                            break;
-                        case rightToLeft:
-                            System.out.print('<');
-                            break;
-                    }
-                    return message;
-                });
-        try {
-            System.in.read();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            midiProxy.close();
-        }
-
     }
 }

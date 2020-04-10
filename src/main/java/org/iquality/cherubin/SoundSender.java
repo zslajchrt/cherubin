@@ -1,19 +1,18 @@
 package org.iquality.cherubin;
 
-import javax.sound.midi.MidiDevice;
-import javax.sound.midi.Receiver;
-import javax.sound.midi.ShortMessage;
+import javax.sound.midi.*;
 
-public class SoundSender extends MidiPortCommunicator {
+public class SoundSender {
 
+    public static final int SOUND_DUMP_DELAY = 500;
 
     private final ShortMessage probeNoteOn;
     private final ShortMessage probeNoteOff;
-    private final Receiver receiver;
 
-    public SoundSender(MidiDevice midiOutPort) {
-        super(midiOutPort);
+    private final AppModel appModel;
 
+    public SoundSender(AppModel appModel) {
+        this.appModel = appModel;
         try {
             probeNoteOn = new ShortMessage();
             // Start playing the note Middle C (60),
@@ -25,22 +24,57 @@ public class SoundSender extends MidiPortCommunicator {
             // moderately loud (velocity = 93).
             probeNoteOff.setMessage(ShortMessage.NOTE_OFF, 0, 60, 0);
 
-            device.open();
-            receiver = device.getReceiver();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
+    private Receiver getReceiver(AppModel.OutputDirection outputDirection) {
+        try {
+            return appModel.getOutputDevice(outputDirection).getReceiver();
+        } catch (MidiUnavailableException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public void probeNoteOn() {
-        receiver.send(probeNoteOn, -1);
+        getReceiver(getDefaultDirection()).send(probeNoteOn, -1);
     }
 
     public void probeNoteOff() {
-        receiver.send(probeNoteOff, -1);
+        getReceiver(getDefaultDirection()).send(probeNoteOff, -1);
     }
 
-    public void sendSound(SingleSound sound) {
-        receiver.send(sound.cloneForEditBuffer().dump, -1);
+    public void sendSoundWithDelay(SingleSound sound) {
+        sendSoundWithDelay(sound, getDefaultDirection());
+    }
+
+    public void sendSoundWithDelay(SingleSound sound, AppModel.OutputDirection outputDirection) {
+        sendSound(sound, outputDirection);
+        try {
+            Thread.sleep(SOUND_DUMP_DELAY);
+        } catch (InterruptedException ignored) {
+        }
+    }
+
+    public void sendSound(SingleSound sound, boolean sendToEditBuffer) {
+        sendSound(sound, sendToEditBuffer, getDefaultDirection());
+    }
+
+    private AppModel.OutputDirection getDefaultDirection() {
+        return appModel.getDefaultOutputDirection();
+    }
+
+    public void sendSound(SingleSound sound, AppModel.OutputDirection outputDirection) {
+        sendSound(sound, false, outputDirection);
+    }
+
+    public void sendSound(SingleSound sound, boolean sendToEditBuffer, AppModel.OutputDirection outputDirection) {
+        if (sendToEditBuffer) {
+            getReceiver(outputDirection).send(sound.cloneForEditBuffer().sysEx, -1);
+        } else {
+            System.out.println("Sending " + sound.name + " to bank " + sound.getBank() + " and slot " + sound.getSlot());
+            getReceiver(outputDirection).send(sound.sysEx, -1);
+        }
     }
 }

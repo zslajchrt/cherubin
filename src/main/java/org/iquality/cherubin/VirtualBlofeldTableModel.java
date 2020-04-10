@@ -5,7 +5,7 @@ import java.util.List;
 
 import static org.iquality.cherubin.VirtualBlofeldModel.BANK_SIZE;
 
-public class VirtualBlofeldTableModel extends AbstractTableModel {
+public class VirtualBlofeldTableModel extends AbstractTableModel implements VirtualBlofeldModel.BlofeldListener {
     public static final int COLUMN_SLOT = 0;
     public static final int COLUMN_NAME = 1;
     public static final int COLUMN_CATEGORY = 2;
@@ -14,14 +14,14 @@ public class VirtualBlofeldTableModel extends AbstractTableModel {
 
     private final String[] columnNames = {"Slot", "Name", "Category", "SoundSet", "RefId"};
 
-    private final List<SingleSound> soundBank;
+    private final int bankNum;
 
     private final VirtualBlofeldModel blofeldModel;
 
-    public VirtualBlofeldTableModel(VirtualBlofeldModel blofeldModel, List<SingleSound> soundBank) {
+    public VirtualBlofeldTableModel(VirtualBlofeldModel blofeldModel, int bankNum) {
         this.blofeldModel = blofeldModel;
-        assert soundBank.size() == BANK_SIZE;
-        this.soundBank = soundBank;
+        this.bankNum = bankNum;
+        blofeldModel.addBlofeldListener(this);
     }
 
     @Override
@@ -46,7 +46,7 @@ public class VirtualBlofeldTableModel extends AbstractTableModel {
 
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-        SingleSound sound = soundBank.get(rowIndex);
+        SingleSound sound = getBank().get(rowIndex);
         Object returnValue;
         switch (columnIndex) {
             case COLUMN_SLOT:
@@ -70,8 +70,38 @@ public class VirtualBlofeldTableModel extends AbstractTableModel {
         return returnValue;
     }
 
+    private List<SingleSound> getBank() {
+        return blofeldModel.getBank(bankNum);
+    }
+
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
     }
 
+    public void updateSound(int slot, SingleSound sound) {
+        blofeldModel.getBlofeld().updateSound(bankNum, slot, sound);
+        fireTableDataChanged();
+    }
+
+    @Override
+    public void blofeldChanged(VirtualBlofeld blofeld) {
+        fireTableDataChanged();
+    }
+
+    public void deleteSound(int slot) {
+        blofeldModel.getBlofeld().deleteSound(bankNum, slot);
+        fireTableDataChanged();
+    }
+
+    public void sendSoundOn(SingleSound sound) {
+        blofeldModel.sendSoundOn(sound);
+    }
+
+    public void sendSoundOff() {
+        blofeldModel.sendSoundOff();
+    }
+
+    public void sendSound(SingleSound sound, AppModel.OutputDirection outputDirection) {
+        blofeldModel.sendSound(sound, outputDirection);
+    }
 }

@@ -12,16 +12,16 @@ public class SequenceTableModel extends AbstractTableModel {
 
     private final String[] columnNames = {"Timestamp", "Status", "Length", "Description"};
 
-    private final AppModel appModel;
-    private Sequence sequence;
+    private final SequenceModel sequenceModel;
+    private final int trackNumber;
 
-    public SequenceTableModel(AppModel appModel) {
-        this.appModel = appModel;
-        this.sequence = appModel.createSequenceWithOneTrack();
+    public SequenceTableModel(SequenceModel sequenceModel, int trackNumber) {
+        this.sequenceModel = sequenceModel;
+        this.trackNumber = trackNumber;
     }
 
     public Track getTrack() {
-        return sequence.getTracks()[0];
+        return sequenceModel.getSequence().getTracks()[trackNumber];
     }
 
     @Override
@@ -73,41 +73,4 @@ public class SequenceTableModel extends AbstractTableModel {
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
     }
-
-    public void setSequence(Sequence sequence) {
-        this.sequence = sequence;
-        fireTableDataChanged();
-    }
-
-    public void loadSequence(File file) {
-        sequence = appModel.loadSequence(file);
-        fireTableDataChanged();
-    }
-
-    public void saveSequence(File file) {
-        appModel.saveSequence(sequence, file);
-    }
-
-    public void clearSequence() {
-        sequence = appModel.createSequenceWithOneTrack();
-        fireTableDataChanged();
-    }
-
-    public void recordSequence(Receiver listener) {
-        appModel.recordSequence(sequence, listener);
-    }
-
-    public void stopRecordingSequence() {
-        appModel.stopRecordingSequence();
-        fireTableDataChanged();
-    }
-
-    public void playSequence(Receiver listener) {
-        appModel.playSequence(sequence, listener);
-    }
-
-    public void stopPlayingSequence() {
-        appModel.stopPlayingSequence();
-    }
-
 }

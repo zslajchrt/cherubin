@@ -7,6 +7,7 @@ import javax.sound.midi.MidiDevice;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.MidiUnavailableException;
 
+@Deprecated
 public class MidiPortCommunicator {
 
     protected final MidiDevice device;

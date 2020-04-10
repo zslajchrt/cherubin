@@ -26,10 +26,10 @@ public class SoundDbModel {
     private Map<String, SoundSet<SingleSound>> soundSetsMap = new HashMap<>();
     private List<SingleSound> sounds = new ArrayList<>();
 
-    public SoundDbModel(AppModel appModel, String url, String user, String password) {
+    public SoundDbModel(AppModel appModel, Connection con) {
         this.appModel = appModel;
         try {
-            con = DriverManager.getConnection(url, user, password);
+            this.con = con;
             insertSoundStm = con.prepareStatement("INSERT INTO SOUND (NAME, CATEGORY, SYSEX, SOUNDSET) VALUES (?, ?, ?, ?)");
             loadAllSoundStm = con.prepareStatement("SELECT ID, NAME, CATEGORY, SYSEX, SOUNDSET FROM SOUND");
 
@@ -39,16 +39,16 @@ public class SoundDbModel {
         }
     }
 
+    public AppModel getAppModel() {
+        return appModel;
+    }
+
     public Collection<SoundSet<SingleSound>> getSoundSets() {
         return Collections.unmodifiableCollection(soundSetsMap.values());
     }
 
     public List<SingleSound> getSounds() {
         return Collections.unmodifiableList(sounds);
-    }
-
-    public MidiDevice getCurrentOutputDevice() {
-        return this.appModel.getCurrentOutputDevice();
     }
 
     private void loadSoundSets() {
@@ -60,7 +60,7 @@ public class SoundDbModel {
                 String name = resultSet.getString(2);
                 int catOrd = resultSet.getInt(3);
                 SoundCategory category = SoundCategory.CATEGORIES[catOrd];
-                Blob sysExBlob  = resultSet.getBlob(4);
+                Blob sysExBlob = resultSet.getBlob(4);
                 byte[] sysExBytes = sysExBlob.getBytes(0, (int) sysExBlob.length());
                 String soundSetName = resultSet.getString(5);
 
@@ -88,16 +88,12 @@ public class SoundDbModel {
     private void insertSound(SingleSound sound) throws SQLException {
         insertSoundStm.setString(1, sound.name);
         insertSoundStm.setInt(2, sound.category.ordinal());
-        byte[] sysEx = sound.dump.getMessage();
+        byte[] sysEx = sound.sysEx.getMessage();
         ByteInputStream sysExStream = new ByteInputStream(sysEx, sysEx.length);
         insertSoundStm.setBinaryStream(3, sysExStream);
         insertSoundStm.setString(4, sound.soundSetName);
         insertSoundStm.executeUpdate();
         insertSoundStm.clearParameters();
-    }
-
-    public SingleSound getInitSound() {
-        return sounds.get(0); // TODO: Use a sysex constant
     }
 
     public void close() {
@@ -127,15 +123,6 @@ public class SoundDbModel {
 
         } catch (SQLException ex) {
             ex.printStackTrace();
-        }
-    }
-
-    public MultiSound getInitMulti() {
-        try {
-            byte[] data = new byte[]{(byte) 0xF0, 0, 0, 0, 0, 0, 0, 0}; // TODO: remove the fake data
-            return new MultiSound(0, "Init Multi", new SysexMessage(data, data.length), "");
-        } catch (InvalidMidiDataException e) {
-            throw new RuntimeException(e);
         }
     }
 }

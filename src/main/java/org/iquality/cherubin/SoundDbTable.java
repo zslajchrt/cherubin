@@ -5,13 +5,19 @@ import org.japura.gui.event.ListCheckListener;
 import org.japura.gui.model.ListCheckModel;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.ActionEvent;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -25,23 +31,27 @@ public class SoundDbTable extends JTable implements AppExtension {
 
         tableModel = (SoundDbTableModel) getModel();
 
-        addMouseListener(new MouseAdapter() {
+        addMouseListener(new SoundSendingMouseAdapter() {
             @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    JTable target = (JTable) e.getSource();
-                    int row = target.getSelectedRow();
-                    int column = SoundDbTableModel.COLUMN_NAME;
-                    SingleSound sound = (SingleSound) getValueAt(row, column);
+            protected SingleSound getValueAt(int row, int column) {
+                return (SingleSound) SoundDbTable.this.getValueAt(row, column);
+            }
 
-                    tableModel.sendSoundOn(sound);
-                }
-                if (e.getClickCount() == 1) {
-                    tableModel.sendSoundOff();
-                }
+            @Override
+            protected void sendSound(SingleSound sound, AppModel.OutputDirection direction) {
+                tableModel.sendSound(sound, AppModel.OutputDirection.both);
+            }
+
+            @Override
+            protected void sendSoundOn(SingleSound sound) {
+                tableModel.sendSoundOn(sound);
+            }
+
+            @Override
+            protected void sendSoundOff() {
+                tableModel.sendSoundOff();
             }
         });
-
 
         TableColumnModel columnModel = getColumnModel();
         columnModel.getColumn(SoundDbTableModel.COLUMN_ID).setPreferredWidth(15);
@@ -71,12 +81,17 @@ public class SoundDbTable extends JTable implements AppExtension {
     }
 
     @Override
-    public void activate() {
+    public void initialize() {
         tableModel.fire();
     }
 
     @Override
-    public void deactivate() {
+    public void close() {
+    }
+
+    @Override
+    public void onSelected() {
+        requestFocusInWindow();
     }
 
     @Override
@@ -87,7 +102,84 @@ public class SoundDbTable extends JTable implements AppExtension {
         return components;
     }
 
-//    public List<SingleSound> createListEmployees() {
+    @Override
+    public Action getCutAction() {
+        return null;
+    }
+
+    public static DataFlavor BLOFELD_SOUND_FLAVOR = new DataFlavor(DataFlavor.javaJVMLocalObjectMimeType + ";class=" + SingleSound.class.getName(), "Blofeld Sound");
+
+    private static final DataFlavor[] soundClipboardFlavors;
+
+    static {
+        soundClipboardFlavors = new DataFlavor[]{DataFlavor.stringFlavor, BLOFELD_SOUND_FLAVOR};
+    }
+
+    @Override
+    public Action getCopyAction() {
+        return new AbstractAction() {
+
+            {
+                setEnabled(false);
+
+                SoundDbTable.this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+                    @Override
+                    public void valueChanged(ListSelectionEvent e) {
+                        if (!e.getValueIsAdjusting()) {
+                            setEnabled(true);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Clipboard clipboard = getSystemClipboard();
+                clipboard.setContents(new Transferable() {
+                    @Override
+                    public DataFlavor[] getTransferDataFlavors() {
+                        return soundClipboardFlavors;
+                    }
+
+                    @Override
+                    public boolean isDataFlavorSupported(DataFlavor flavor) {
+                        for (DataFlavor soundClipboardFlavor : soundClipboardFlavors) {
+                            if (soundClipboardFlavor.equals(flavor)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+
+                    @Override
+                    public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+                        int row = getSelectedRow();
+                        if (row < 0) {
+                            return null; // TODO
+                        }
+                        int column = SoundDbTableModel.COLUMN_NAME; // The sound is the underlying object of the name column
+                        SingleSound sound = (SingleSound) getValueAt(row, column);
+
+                        if (DataFlavor.stringFlavor.equals(flavor)) {
+                            return sound.toString();
+                        } else if (BLOFELD_SOUND_FLAVOR.equals(flavor)) {
+                            return sound;
+                        } else {
+                            throw new UnsupportedFlavorException(flavor);
+                        }
+                    }
+                }, null);
+            }
+        };
+    }
+
+    @Override
+    public Action getPasteAction() {
+        return null;
+    }
+
+
+    //    public List<SingleSound> createListEmployees() {
 //        List<SingleSound> listSounds = new ArrayList<>();
 //
 //        SoundSet soundSet1 = new SoundSet("AlienSound");
@@ -226,4 +318,5 @@ public class SoundDbTable extends JTable implements AppExtension {
 
         return ccb;
     }
+
 }

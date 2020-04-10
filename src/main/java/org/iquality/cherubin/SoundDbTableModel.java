@@ -30,7 +30,7 @@ public class SoundDbTableModel extends AbstractTableModel {
         this.soundDbModel = dbModel;
         applyFiltersList();
 
-        this.soundSender = new SoundSender(soundDbModel.getCurrentOutputDevice());
+        this.soundSender = new SoundSender(soundDbModel.getAppModel());
     }
 
     @Override
@@ -163,11 +163,15 @@ public class SoundDbTableModel extends AbstractTableModel {
 
     public void sendSoundOn(SingleSound sound) {
         soundSender.probeNoteOff();
-        soundSender.sendSound(sound);
+        soundSender.sendSound(sound, true);
         soundSender.probeNoteOn();
     }
 
     public void sendSoundOff() {
         soundSender.probeNoteOff();
+    }
+
+    public void sendSound(SingleSound sound, AppModel.OutputDirection outputDirection) {
+        soundSender.sendSound(sound, true, outputDirection);
     }
 }
