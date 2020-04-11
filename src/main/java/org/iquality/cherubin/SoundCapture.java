@@ -4,6 +4,7 @@ import javax.sound.midi.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Deprecated
 public class SoundCapture extends MidiPortCommunicator {
 
     static final int MESSAGE_ID_OFFSET = 4;

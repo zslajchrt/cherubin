@@ -5,15 +5,33 @@ import javax.sound.midi.SysexMessage;
 
 public abstract class Sound {
     public final int id;
-    public final String name;
-    public final SysexMessage sysEx;
-    public final String soundSetName;
+    private String name;
+    private SysexMessage sysEx;
+    private String soundSetName;
 
     public Sound(int id, String name, SysexMessage sysEx, String soundSetName) {
         this.id = id;
         this.name = name;
         this.sysEx = sysEx;
         this.soundSetName = soundSetName;
+    }
+
+    synchronized public void update(String name, SysexMessage sysEx, String soundSetName) {
+        this.name = name;
+        this.sysEx = sysEx;
+        this.soundSetName = soundSetName;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public SysexMessage getSysEx() {
+        return sysEx;
+    }
+
+    public String getSoundSetName() {
+        return soundSetName;
     }
 
     public boolean isEmpty() {
@@ -45,6 +63,9 @@ public abstract class Sound {
     }
 
     public Sound clone(int id, byte programBank, byte programNumber) {
+        if (sysEx == null) {
+            return newInstance(id, name, null, soundSetName);
+        }
         try {
             byte[] data = sysEx.getMessage(); // getMessage() returns a copy
             data[SoundCapture.PROGRAM_BANK_OFFSET] = programBank;

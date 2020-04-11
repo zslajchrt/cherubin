@@ -4,12 +4,11 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 
 public class VirtualBlofeldTable extends JTable {
 
     public static final String DELETE_SOUND = "deleteSound";
+    public static final String SEND_SOUND = "sendSound";
 
     private final VirtualBlofeldTableModel tableModel;
 
@@ -33,12 +32,12 @@ public class VirtualBlofeldTable extends JTable {
         DefaultTableCellRenderer soundNameSellRenderer = new DefaultTableCellRenderer() {
             @Override
             protected void setValue(Object value) {
-                setText(((SingleSound) value).name);
+                setText(((SingleSound) value).getName());
             }
         };
         columnModel.getColumn(VirtualBlofeldTableModel.COLUMN_NAME).setCellRenderer(soundNameSellRenderer);
 
-        addMouseListener(new SoundSendingMouseAdapter() {
+        addMouseListener(new SoundSendingMouseAdapter<SingleSound>() {
             @Override
             protected SingleSound getValueAt(int row, int column) {
                 return (SingleSound) VirtualBlofeldTable.this.getValueAt(row, column);
@@ -46,34 +45,19 @@ public class VirtualBlofeldTable extends JTable {
 
             @Override
             protected void sendSound(SingleSound sound, AppModel.OutputDirection direction) {
-                tableModel.sendSound(sound, AppModel.OutputDirection.both);
+                tableModel.sendSound(sound, direction);
+                tableModel.getBlofeldModel().setEditedSound(sound);
             }
 
             @Override
             protected void sendSoundOn(SingleSound sound) {
                 tableModel.sendSoundOn(sound);
+                tableModel.getBlofeldModel().setEditedSound(sound);
             }
 
             @Override
             protected void sendSoundOff() {
                 tableModel.sendSoundOff();
-            }
-        });
-
-        addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    JTable target = (JTable) e.getSource();
-                    int row = target.getSelectedRow();
-                    int column = SoundDbTableModel.COLUMN_NAME;
-                    SingleSound sound = (SingleSound) getValueAt(row, column);
-
-                    tableModel.sendSoundOn(sound);
-                }
-                if (e.getClickCount() == 1) {
-                    tableModel.sendSoundOff();
-                }
             }
         });
 
@@ -94,6 +78,19 @@ public class VirtualBlofeldTable extends JTable {
             }
         });
 
+        KeyStroke enter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0);
+        getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(enter, SEND_SOUND);
+        getActionMap().put(SEND_SOUND, new SendSoundAction(this, SoundDbTableModel.COLUMN_NAME) {
+            @Override
+            protected void onSound(SingleSound sound, boolean on) {
+                if (on) {
+                    tableModel.sendSoundOn(sound);
+                    tableModel.getBlofeldModel().setEditedSound(sound);
+                } else {
+                    tableModel.sendSoundOff();
+                }
+            }
+        });
     }
 
     public void updateSound(SingleSound sound) {

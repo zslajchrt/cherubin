@@ -1,8 +1,8 @@
 package org.iquality.cherubin;
 
-import javax.sound.midi.MidiDevice;
-import javax.sound.midi.MidiMessage;
+import javax.sound.midi.*;
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class AppFrame extends JFrame {
     static {
@@ -25,6 +26,8 @@ public class AppFrame extends JFrame {
     private final List<AppExtension> appExtensions;
     private final JTabbedPane tabbedPane;
 
+    private int currentlySelectedExt;
+
     public AppFrame(AppModel appModel, SoundDbModel soundDbModel, VirtualBlofeldModel virtualBlofeldModel, int width, int height) throws HeadlessException {
         super("Cherubin - Midi Librarian");
         this.appModel = appModel;
@@ -32,7 +35,7 @@ public class AppFrame extends JFrame {
         this.getContentPane().setPreferredSize(new Dimension(width, height));
 
         SequencePanel sequencePanel = new SequencePanel(new SequenceModel(appModel));
-        SoundDbTable soundDbTable = new SoundDbTable(new SoundDbTableModel(soundDbModel));
+        SoundDbPanel soundDbTable = new SoundDbPanel(soundDbModel);
         VirtualBlofeldPanel blofeldPanel = new VirtualBlofeldPanel(virtualBlofeldModel);
 
         appExtensions = new ArrayList<>();
@@ -45,9 +48,13 @@ public class AppFrame extends JFrame {
             ext.initialize();
             JPanel tabPanel = new JPanel(new BorderLayout());
             JPanel toolBar = new JPanel();
-            ext.getToolbarComponents().forEach(toolBar::add);
+            ext.getToolBarComponents().forEach(toolBar::add);
             tabPanel.add(toolBar, BorderLayout.PAGE_START);
-            tabPanel.add(new JScrollPane((Component) ext), BorderLayout.CENTER);
+            tabPanel.add(ext.getMainPanel(), BorderLayout.CENTER);
+
+            JPanel statusBar = makeStatusBar();
+            ext.getStatusBarComponents().forEach(statusBar::add);
+            tabPanel.add(statusBar, BorderLayout.PAGE_END);
 
             tabbedPane.add(tabPanel, ext.getExtensionName());
         }
@@ -55,7 +62,9 @@ public class AppFrame extends JFrame {
 
         add(tabbedPane, BorderLayout.CENTER);
 
-        add(new RoutingPanel(appModel), BorderLayout.PAGE_END);
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.add(new RoutingPanel(appModel), BorderLayout.PAGE_START);
+        add(bottomPanel, BorderLayout.PAGE_END);
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -76,8 +85,21 @@ public class AppFrame extends JFrame {
         notifySelected();
     }
 
+    private JPanel makeStatusBar() {
+        JPanel statusBar = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        TitledBorder titled = BorderFactory.createTitledBorder("Status");
+        statusBar.setBorder(titled);
+        final JLabel status = new JLabel();
+        statusBar.add(status);
+        return statusBar;
+    }
+
     private void notifySelected() {
-        SwingUtilities.invokeLater(() -> appExtensions.get(tabbedPane.getSelectedIndex()).onSelected());
+        SwingUtilities.invokeLater(() -> {
+            appExtensions.get(currentlySelectedExt).onDeselected();
+            currentlySelectedExt = tabbedPane.getSelectedIndex();
+            appExtensions.get(currentlySelectedExt).onSelected();
+        });
     }
 
 
@@ -164,10 +186,12 @@ public class AppFrame extends JFrame {
     }
 
     public static void main(String[] args) throws Exception {
-        MidiDevice leftIn = MidiPortCommunicator.findDevice("VirtualMIDICable1", true);
-        MidiDevice leftOut = MidiPortCommunicator.findDevice("VirtualMIDICable2", false);
-        MidiDevice rightIn = MidiPortCommunicator.findDevice("Blofeld", true);
-        MidiDevice rightOut = MidiPortCommunicator.findDevice("Blofeld", false);
+
+        //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("Avid 003 Rack Port 1", true);
+        Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("VirtualMIDICable1", true);
+        Supplier<MidiDevice> leftOut = () -> MidiPortCommunicator.findDevice("VirtualMIDICable2", false);
+        Supplier<MidiDevice> rightIn = () -> MidiPortCommunicator.findDevice("Blofeld", true);
+        Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Blofeld", false);
         AppModel appModel = new AppModel(leftIn, leftOut, rightIn, rightOut);
 
         MidiProxy midiProxy = new MidiProxy(appModel, new MidiProxy.MidiProxyListener() {

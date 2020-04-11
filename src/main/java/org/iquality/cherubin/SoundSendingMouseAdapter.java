@@ -5,13 +5,13 @@ import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-public abstract class SoundSendingMouseAdapter extends MouseAdapter {
+public abstract class SoundSendingMouseAdapter<T> extends MouseAdapter {
 
-    protected abstract SingleSound getValueAt(int row, int column);
+    protected abstract T getValueAt(int row, int column);
 
-    protected abstract void sendSound(SingleSound sound, AppModel.OutputDirection direction);
+    protected abstract void sendSound(T sound, AppModel.OutputDirection direction);
 
-    protected abstract void sendSoundOn(SingleSound sound);
+    protected abstract void sendSoundOn(T sound);
 
     protected abstract void sendSoundOff();
 
@@ -21,7 +21,7 @@ public abstract class SoundSendingMouseAdapter extends MouseAdapter {
             JTable target = (JTable) e.getSource();
             int row = target.getSelectedRow();
             int column = SoundDbTableModel.COLUMN_NAME;
-            SingleSound sound = (SingleSound) getValueAt(row, column);
+            T sound = getValueAt(row, column);
 
             if ((e.getModifiersEx() & (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) == (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) {
                 sendSound(sound, AppModel.OutputDirection.both);

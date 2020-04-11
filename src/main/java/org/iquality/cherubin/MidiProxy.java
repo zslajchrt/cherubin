@@ -30,12 +30,12 @@ public class MidiProxy {
     }
 
     public MidiProxy(AppModel appModel, MidiProxyListener listener) {
-        this.leftIn = appModel.getInputDevice(AppModel.InputDirection.left);
-        this.leftOut = appModel.getOutputDevice(AppModel.OutputDirection.left);
-        this.rightIn = appModel.getInputDevice(AppModel.InputDirection.right);
-        this.rightOut = appModel.getOutputDevice(AppModel.OutputDirection.right);
-
         try {
+            this.leftIn = open(appModel.getInputDevice(AppModel.InputDirection.left));
+            this.leftOut = open(appModel.getOutputDevice(AppModel.OutputDirection.left));
+            this.rightIn = open(appModel.getInputDevice(AppModel.InputDirection.right));
+            this.rightOut = open(appModel.getOutputDevice(AppModel.OutputDirection.right));
+
             leftInTransmitter = leftIn.getTransmitter();
             rightInTransmitter = rightIn.getTransmitter();
 
@@ -47,6 +47,11 @@ public class MidiProxy {
         } catch (MidiUnavailableException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private MidiDevice open(MidiDevice device) throws MidiUnavailableException {
+        device.open();
+        return device;
     }
 
     public void close() {

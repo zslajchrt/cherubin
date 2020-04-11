@@ -24,6 +24,10 @@ public class VirtualBlofeldTableModel extends AbstractTableModel implements Virt
         blofeldModel.addBlofeldListener(this);
     }
 
+    public VirtualBlofeldModel getBlofeldModel() {
+        return blofeldModel;
+    }
+
     @Override
     public int getColumnCount() {
         return columnNames.length;
@@ -56,10 +60,10 @@ public class VirtualBlofeldTableModel extends AbstractTableModel implements Virt
                 returnValue = sound;
                 break;
             case COLUMN_CATEGORY:
-                returnValue = sound.category;
+                returnValue = sound.getCategory();
                 break;
             case COLUMN_SOUNDSET:
-                returnValue = sound.soundSetName;
+                returnValue = sound.getSoundSetName();
                 break;
             case COLUMN_REFID:
                 returnValue = sound.id;

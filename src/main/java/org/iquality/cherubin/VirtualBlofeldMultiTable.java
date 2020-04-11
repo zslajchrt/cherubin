@@ -27,7 +27,7 @@ public class VirtualBlofeldMultiTable extends JTable {
         DefaultTableCellRenderer soundNameSellRenderer = new DefaultTableCellRenderer() {
             @Override
             protected void setValue(Object value) {
-                setText(((MultiSound) value).name);
+                setText(((MultiSound) value).getName());
             }
         };
         columnModel.getColumn(VirtualBlofeldTableModel.COLUMN_NAME).setCellRenderer(soundNameSellRenderer);

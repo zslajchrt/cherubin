@@ -1,29 +1,18 @@
 package org.iquality.cherubin;
 
-import org.japura.gui.CheckComboBox;
-import org.japura.gui.event.ListCheckListener;
-import org.japura.gui.model.ListCheckModel;
-
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
-import java.awt.*;
-import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
-import java.awt.datatransfer.UnsupportedFlavorException;
-import java.awt.event.ActionEvent;
-import java.io.IOException;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.Consumer;
 
-public class SoundDbTable extends JTable implements AppExtension {
+public class SoundDbTable extends JTable {
+    public static final String SEND_SOUND = "sendSound";
     final SoundDbTableModel tableModel;
 
     public SoundDbTable(SoundDbTableModel soundDbTableModel) {
@@ -31,7 +20,7 @@ public class SoundDbTable extends JTable implements AppExtension {
 
         tableModel = (SoundDbTableModel) getModel();
 
-        addMouseListener(new SoundSendingMouseAdapter() {
+        addMouseListener(new SoundSendingMouseAdapter<SingleSound>() {
             @Override
             protected SingleSound getValueAt(int row, int column) {
                 return (SingleSound) SoundDbTable.this.getValueAt(row, column);
@@ -39,12 +28,14 @@ public class SoundDbTable extends JTable implements AppExtension {
 
             @Override
             protected void sendSound(SingleSound sound, AppModel.OutputDirection direction) {
-                tableModel.sendSound(sound, AppModel.OutputDirection.both);
+                tableModel.sendSound(sound, direction);
+                tableModel.getSoundDbModel().setEditedSound(sound);
             }
 
             @Override
             protected void sendSoundOn(SingleSound sound) {
                 tableModel.sendSoundOn(sound);
+                tableModel.getSoundDbModel().setEditedSound(sound);
             }
 
             @Override
@@ -68,43 +59,27 @@ public class SoundDbTable extends JTable implements AppExtension {
         setRowSorter(sorter);
         List<RowSorter.SortKey> sortKeys = new ArrayList<>();
 
+        sortKeys.add(new RowSorter.SortKey(SoundDbTableModel.COLUMN_ID, SortOrder.ASCENDING));
         sortKeys.add(new RowSorter.SortKey(SoundDbTableModel.COLUMN_CATEGORY, SortOrder.ASCENDING));
         sortKeys.add(new RowSorter.SortKey(SoundDbTableModel.COLUMN_NAME, SortOrder.ASCENDING));
         sorter.setSortKeys(sortKeys);
         sorter.setComparator(SoundDbTableModel.COLUMN_CATEGORY, Comparator.comparing(Object::toString));
         sorter.sort();
-    }
 
-    @Override
-    public String getExtensionName() {
-        return "Blofeld Sound Base";
-    }
 
-    @Override
-    public void initialize() {
-        tableModel.fire();
-    }
-
-    @Override
-    public void close() {
-    }
-
-    @Override
-    public void onSelected() {
-        requestFocusInWindow();
-    }
-
-    @Override
-    public List<Component> getToolbarComponents() {
-        List<Component> components = new ArrayList<>();
-        components.add(makeCategoryFilterCombo());
-        components.add(makeSoundSetFilterCombo());
-        return components;
-    }
-
-    @Override
-    public Action getCutAction() {
-        return null;
+        KeyStroke enter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0);
+        getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(enter, SEND_SOUND);
+        getActionMap().put(SEND_SOUND, new SendSoundAction(this, SoundDbTableModel.COLUMN_NAME) {
+            @Override
+            protected void onSound(SingleSound sound, boolean on) {
+                if (on) {
+                    tableModel.sendSoundOn(sound);
+                    tableModel.getSoundDbModel().setEditedSound(sound);
+                } else {
+                    tableModel.sendSoundOff();
+                }
+            }
+        });
     }
 
     public static DataFlavor BLOFELD_SOUND_FLAVOR = new DataFlavor(DataFlavor.javaJVMLocalObjectMimeType + ";class=" + SingleSound.class.getName(), "Blofeld Sound");
@@ -114,70 +89,6 @@ public class SoundDbTable extends JTable implements AppExtension {
     static {
         soundClipboardFlavors = new DataFlavor[]{DataFlavor.stringFlavor, BLOFELD_SOUND_FLAVOR};
     }
-
-    @Override
-    public Action getCopyAction() {
-        return new AbstractAction() {
-
-            {
-                setEnabled(false);
-
-                SoundDbTable.this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-                    @Override
-                    public void valueChanged(ListSelectionEvent e) {
-                        if (!e.getValueIsAdjusting()) {
-                            setEnabled(true);
-                        }
-                    }
-                });
-            }
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Clipboard clipboard = getSystemClipboard();
-                clipboard.setContents(new Transferable() {
-                    @Override
-                    public DataFlavor[] getTransferDataFlavors() {
-                        return soundClipboardFlavors;
-                    }
-
-                    @Override
-                    public boolean isDataFlavorSupported(DataFlavor flavor) {
-                        for (DataFlavor soundClipboardFlavor : soundClipboardFlavors) {
-                            if (soundClipboardFlavor.equals(flavor)) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    }
-
-                    @Override
-                    public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
-                        int row = getSelectedRow();
-                        if (row < 0) {
-                            return null; // TODO
-                        }
-                        int column = SoundDbTableModel.COLUMN_NAME; // The sound is the underlying object of the name column
-                        SingleSound sound = (SingleSound) getValueAt(row, column);
-
-                        if (DataFlavor.stringFlavor.equals(flavor)) {
-                            return sound.toString();
-                        } else if (BLOFELD_SOUND_FLAVOR.equals(flavor)) {
-                            return sound;
-                        } else {
-                            throw new UnsupportedFlavorException(flavor);
-                        }
-                    }
-                }, null);
-            }
-        };
-    }
-
-    @Override
-    public Action getPasteAction() {
-        return null;
-    }
-
 
     //    public List<SingleSound> createListEmployees() {
 //        List<SingleSound> listSounds = new ArrayList<>();
@@ -289,34 +200,4 @@ public class SoundDbTable extends JTable implements AppExtension {
 //        });
 //        return button;
 //    }
-
-    CheckComboBox makeCategoryFilterCombo() {
-        return makeFilterCombo(tableModel.getCategoriesNotifier(), tableModel.getCategoryFilterListener());
-    }
-
-    CheckComboBox makeSoundSetFilterCombo() {
-        return makeFilterCombo(tableModel.getSoundSetsNotifier(), tableModel.getSoundSetFilterListener());
-    }
-
-    private <T> void updateCheckComboBoxMode(CheckComboBox ccb, Iterable<T> values) {
-        ListCheckModel comboModel = ccb.getModel();
-        comboModel.clear();
-        for (Object val : values) {
-            comboModel.addElement(val);
-        }
-    }
-
-    <T> CheckComboBox makeFilterCombo(Consumer<Consumer<Iterable<T>>> notifier, ListCheckListener checkListener) {
-        CheckComboBox ccb = new CheckComboBox();
-        ccb.setTextFor(CheckComboBox.NONE, "* any item selected *");
-        ccb.setTextFor(CheckComboBox.MULTIPLE, "* multiple items *");
-        ccb.setTextFor(CheckComboBox.ALL, "* all selected *");
-
-        notifier.accept(newValues -> updateCheckComboBoxMode(ccb, newValues));
-
-        ccb.getModel().addListCheckListener(checkListener);
-
-        return ccb;
-    }
-
 }

@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class VirtualBlofeldModel {
+public class VirtualBlofeldModel extends SoundEditorModel {
 
     public static final int BANKS_NUMBER = 8;
     public static final int BANK_SIZE = 128;
@@ -28,6 +28,8 @@ public class VirtualBlofeldModel {
     private final SoundSender soundSender;
 
     public VirtualBlofeldModel(Connection con, AppModel appModel) {
+        super(appModel);
+
         try {
             blofeldNamesStm = con.prepareStatement("SELECT NAME FROM BLOFELD");
             loadBlofeldStm = con.prepareStatement("SELECT ID FROM BLOFELD WHERE NAME = ?");
@@ -71,7 +73,7 @@ public class VirtualBlofeldModel {
     }
 
     private List<SingleSound> loadBank(String blofeldName, int bankNum) throws Exception {
-        List<SingleSound> bank = initBank();
+        List<SingleSound> bank = initBank(bankNum);
 
         loadBankStm.clearParameters();
         loadBankStm.setString(1, blofeldName);
@@ -96,10 +98,10 @@ public class VirtualBlofeldModel {
         }
     }
 
-    private List<SingleSound> initBank() {
+    private List<SingleSound> initBank(int bank) {
         List<SingleSound> bankList = new ArrayList<>();
         for (int program = 0; program < BANK_SIZE; program++) {
-            bankList.add(EMPTY_SOUND);
+            bankList.add((SingleSound) EMPTY_SOUND.clone((byte) bank, (byte) program));
         }
         return bankList;
     }
@@ -127,10 +129,10 @@ public class VirtualBlofeldModel {
                         insertSoundStm.clearParameters();
                         insertSoundStm.setInt(1, bank);
                         insertSoundStm.setInt(2, slot);
-                        insertSoundStm.setString(3, sound.name);
-                        insertSoundStm.setInt(4, sound.category.ordinal());
-                        insertSoundStm.setString(5, sound.soundSetName);
-                        byte[] sysEx = sound.sysEx.getMessage();
+                        insertSoundStm.setString(3, sound.getName());
+                        insertSoundStm.setInt(4, sound.getCategory().ordinal());
+                        insertSoundStm.setString(5, sound.getSoundSetName());
+                        byte[] sysEx = sound.getSysEx().getMessage();
                         ByteInputStream sysExStream = new ByteInputStream(sysEx, sysEx.length);
                         insertSoundStm.setBinaryStream(6, sysExStream);
                         insertSoundStm.setInt(7, blofeld.id);

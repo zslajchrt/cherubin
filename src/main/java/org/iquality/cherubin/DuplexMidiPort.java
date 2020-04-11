@@ -28,7 +28,7 @@ public final class DuplexMidiPort implements MidiDevice {
         if (!device1.isOpen()) {
             device1.open();
         }
-        if (device2.isOpen()) {
+        if (!device2.isOpen()) {
             device2.open();
         }
     }

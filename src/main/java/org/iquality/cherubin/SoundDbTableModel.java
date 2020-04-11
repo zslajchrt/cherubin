@@ -33,6 +33,10 @@ public class SoundDbTableModel extends AbstractTableModel {
         this.soundSender = new SoundSender(soundDbModel.getAppModel());
     }
 
+    public SoundDbModel getSoundDbModel() {
+        return soundDbModel;
+    }
+
     @Override
     public int getColumnCount() {
         return columnNames.length;
@@ -50,10 +54,18 @@ public class SoundDbTableModel extends AbstractTableModel {
 
     @Override
     public Class<?> getColumnClass(int columnIndex) {
-        if (listSounds.isEmpty()) {
-            return Object.class;
+        switch (columnIndex) {
+            case COLUMN_ID:
+                return Integer.class;
+            case COLUMN_NAME:
+                return SingleSound.class;
+            case COLUMN_CATEGORY:
+                return SoundCategory.class;
+            case COLUMN_SOUNDSET:
+                return String.class;
+            default:
+                throw new IllegalArgumentException("Invalid column index");
         }
-        return getValueAt(0, columnIndex).getClass();
     }
 
     @Override
@@ -68,10 +80,10 @@ public class SoundDbTableModel extends AbstractTableModel {
                 returnValue = sound;
                 break;
             case COLUMN_CATEGORY:
-                returnValue = sound.category;
+                returnValue = sound.getCategory();
                 break;
             case COLUMN_SOUNDSET:
-                returnValue = sound.soundSetName;
+                returnValue = sound.getSoundSetName();
                 break;
             default:
                 throw new IllegalArgumentException("Invalid column index");
@@ -89,7 +101,7 @@ public class SoundDbTableModel extends AbstractTableModel {
     }
 
     private void applyCategoryFilter(List<Object> checkedCategories) {
-        categoryFilter = checkedCategories.isEmpty() ? sound -> true : sound -> checkedCategories.contains(sound.category);
+        categoryFilter = checkedCategories.isEmpty() ? sound -> true : sound -> checkedCategories.contains(sound.getCategory());
         applyFiltersList();
     }
 

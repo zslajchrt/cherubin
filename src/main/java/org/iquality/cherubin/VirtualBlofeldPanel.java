@@ -16,6 +16,10 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
     private final JTabbedPane tabbedPane;
     private final List<JTable> tabTables = new ArrayList<>();
 
+    private final JLabel editedSound = new JLabel("Edited sound: N/A");
+
+    private boolean isSelected;
+
     public VirtualBlofeldPanel(VirtualBlofeldModel blofeldModel) {
         super(new BorderLayout());
         this.blofeldModel = blofeldModel;
@@ -23,7 +27,7 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
         for (int i = 0; i < VirtualBlofeldModel.BANKS_NUMBER; i++) {
             VirtualBlofeldTableModel blofeldBankTableModel = new VirtualBlofeldTableModel(blofeldModel, i);
             VirtualBlofeldTable blofeldBankTable = new VirtualBlofeldTable(blofeldBankTableModel);
-            tabbedPane.add(new JScrollPane(blofeldBankTable), "" + (char)('A' + i));
+            tabbedPane.add(new JScrollPane(blofeldBankTable), "" + (char) ('A' + i));
             tabTables.add(blofeldBankTable);
         }
 
@@ -32,6 +36,49 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
         tabTables.add(blofeldMultiTable);
 
         add(tabbedPane, BorderLayout.CENTER);
+
+        blofeldModel.addSoundEditorModelListener(new SoundEditorModel.SoundEditorModelListener() {
+            @Override
+            public void editedSoundSelected(SingleSound sound) {
+                editedSound.setText("Edited sound: " + sound);
+            }
+
+            @Override
+            public void editedSoundUpdated(SingleSound sound) {
+                editedSound.setText("Edited sound: " + sound + "*");
+                tabTables.forEach(jTable -> ((AbstractTableModel) jTable.getModel()).fireTableDataChanged());
+
+                int[] tabAndRow = new int[2];
+                findSoundInTable(sound, tabAndRow);
+                int tab = tabAndRow[0];
+                int soundRow = tabAndRow[1];
+                if (tab >= 0 && soundRow >= 0) {
+                    tabbedPane.setSelectedIndex(tab);
+                    JTable table = tabTables.get(tab);
+                    table.getSelectionModel().setSelectionInterval(soundRow, soundRow);
+                    table.scrollRectToVisible(table.getCellRect(soundRow, 0, true));
+                    SwingUtilities.invokeLater(() -> onSelected());
+                }
+
+            }
+        });
+
+    }
+
+    private void findSoundInTable(SingleSound sound, int[] tabAndRow) {
+        for (int tableIndex = 0; tableIndex < tabTables.size(); tableIndex++) {
+            JTable table = tabTables.get(tableIndex);
+            for (int row = 0; row < table.getRowCount(); row++) {
+                Sound soundAtRow = (Sound) table.getValueAt(row, SoundDbTableModel.COLUMN_NAME);
+                if (soundAtRow == sound) {
+                    tabAndRow[0] = tableIndex;
+                    tabAndRow[1] = row;
+                    return;
+                }
+            }
+        }
+        tabAndRow[0] = -1;
+        tabAndRow[1] = -1;
     }
 
     @Override
@@ -51,18 +98,37 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
 
     @Override
     public void onSelected() {
+        isSelected = true;
         ((JScrollPane) tabbedPane.getSelectedComponent()).getViewport().getView().requestFocusInWindow();
     }
 
     @Override
-    public List<Component> getToolbarComponents() {
+    public void onDeselected() {
+        isSelected = false;
+    }
+
+    @Override
+    public Component getMainPanel() {
+        return new JScrollPane(this);
+    }
+
+    @Override
+    public List<Component> getToolBarComponents() {
         List<Component> buttons = new ArrayList<>();
         buttons.add(makeNewButton());
         buttons.add(makeLoadButton());
         buttons.add(makeSaveButton());
         buttons.add(makeDeleteButton());
         buttons.add(makeUploadButton());
+        buttons.add(blofeldModel.makeSoundDumpCheckBox(() -> isSelected));
         return buttons;
+    }
+
+    @Override
+    public List<Component> getStatusBarComponents() {
+        List<Component> components = new ArrayList<>();
+        components.add(editedSound);
+        return components;
     }
 
     protected JButton makeNewButton() {
@@ -93,7 +159,7 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
                     }
                 }
                 blofeldModel.newBlofeld(name);
-                tabTables.forEach(tbl -> ((AbstractTableModel)tbl.getModel()).fireTableDataChanged());
+                tabTables.forEach(tbl -> ((AbstractTableModel) tbl.getModel()).fireTableDataChanged());
             }
         }));
     }
@@ -178,7 +244,7 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
                     JTable selectedTab = tabTables.get(tabbedPane.getSelectedIndex());
                     if (selectedTab instanceof VirtualBlofeldTable) {
                         int savedSelection = selectedTab.getSelectionModel().getMinSelectionIndex();
-                        ((VirtualBlofeldTable)selectedTab).updateSound(sound);
+                        ((VirtualBlofeldTable) selectedTab).updateSound(sound);
                         selectedTab.getSelectionModel().setSelectionInterval(savedSelection, savedSelection);
                     }
 

@@ -2,6 +2,7 @@ package org.iquality.cherubin;
 
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.Receiver;
+import javax.sound.midi.ShortMessage;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ComponentEvent;
@@ -10,6 +11,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class SequencePanel extends JPanel implements AppExtension {
@@ -57,7 +59,12 @@ public class SequencePanel extends JPanel implements AppExtension {
     }
 
     @Override
-    public List<Component> getToolbarComponents() {
+    public Component getMainPanel() {
+        return new JScrollPane(this);
+    }
+
+    @Override
+    public List<Component> getToolBarComponents() {
         List<Component> buttons = new ArrayList<>();
         buttons.add(makeLoadButton());
         buttons.add(makeSaveButton());
@@ -65,6 +72,11 @@ public class SequencePanel extends JPanel implements AppExtension {
         buttons.add(makePlayButton());
         buttons.add(makeClearButton());
         return buttons;
+    }
+
+    @Override
+    public List<Component> getStatusBarComponents() {
+        return Collections.emptyList();
     }
 
     protected JButton makeLoadButton() {
@@ -126,7 +138,11 @@ public class SequencePanel extends JPanel implements AppExtension {
                 sequenceModel.playSequence(new Receiver() {
                     @Override
                     public void send(MidiMessage message, long timeStamp) {
-                        System.out.println("P:" + timeStamp + ":" + message.getStatus());
+                        if (message instanceof ShortMessage) {
+                            System.out.printf("%s %d: %02X %02X %02X\n", message.getClass().getSimpleName(), timeStamp, message.getStatus(), ((ShortMessage) message).getData1(), ((ShortMessage) message).getData2());
+                        } else {
+                            //System.out.printf("%s %d: %02X\n", message.getClass().getSimpleName(), timeStamp, message.getStatus());
+                        }
                     }
 
                     @Override

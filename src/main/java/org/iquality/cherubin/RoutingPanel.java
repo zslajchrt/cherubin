@@ -1,8 +1,7 @@
 package org.iquality.cherubin;
 
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
+import javax.swing.border.*;
 import java.awt.*;
 
 public class RoutingPanel extends JPanel {
@@ -66,5 +65,8 @@ public class RoutingPanel extends JPanel {
 
         add(leftPanel, BorderLayout.WEST);
         add(rightPanel, BorderLayout.EAST);
+
+        TitledBorder titled = BorderFactory.createTitledBorder("MIDI Routing");
+        setBorder(titled);
     }
 }

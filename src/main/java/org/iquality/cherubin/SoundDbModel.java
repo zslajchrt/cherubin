@@ -16,9 +16,8 @@ import java.util.*;
  * Start Web Console: java -jar ~/.m2/repository/com/h2database/h2/1.4.199/h2-1.4.199.jar -baseDir /Users/zslajchrt/Music/Waldorf/Blofeld/Cherubin
  * User: zbynek
  */
-public class SoundDbModel {
+public class SoundDbModel extends SoundEditorModel {
 
-    private final AppModel appModel;
     private final Connection con;
     private final PreparedStatement insertSoundStm;
     private final PreparedStatement loadAllSoundStm;
@@ -27,7 +26,8 @@ public class SoundDbModel {
     private List<SingleSound> sounds = new ArrayList<>();
 
     public SoundDbModel(AppModel appModel, Connection con) {
-        this.appModel = appModel;
+        super(appModel);
+
         try {
             this.con = con;
             insertSoundStm = con.prepareStatement("INSERT INTO SOUND (NAME, CATEGORY, SYSEX, SOUNDSET) VALUES (?, ?, ?, ?)");
@@ -86,12 +86,12 @@ public class SoundDbModel {
     }
 
     private void insertSound(SingleSound sound) throws SQLException {
-        insertSoundStm.setString(1, sound.name);
-        insertSoundStm.setInt(2, sound.category.ordinal());
-        byte[] sysEx = sound.sysEx.getMessage();
+        insertSoundStm.setString(1, sound.getName());
+        insertSoundStm.setInt(2, sound.getCategory().ordinal());
+        byte[] sysEx = sound.getSysEx().getMessage();
         ByteInputStream sysExStream = new ByteInputStream(sysEx, sysEx.length);
         insertSoundStm.setBinaryStream(3, sysExStream);
-        insertSoundStm.setString(4, sound.soundSetName);
+        insertSoundStm.setString(4, sound.getSoundSetName());
         insertSoundStm.executeUpdate();
         insertSoundStm.clearParameters();
     }

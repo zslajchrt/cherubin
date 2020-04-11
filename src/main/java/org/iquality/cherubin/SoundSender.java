@@ -1,6 +1,10 @@
 package org.iquality.cherubin;
 
-import javax.sound.midi.*;
+import javax.sound.midi.MidiDevice;
+import javax.sound.midi.MidiUnavailableException;
+import javax.sound.midi.Receiver;
+import javax.sound.midi.ShortMessage;
+import java.util.function.Consumer;
 
 public class SoundSender {
 
@@ -29,20 +33,30 @@ public class SoundSender {
         }
     }
 
-    private Receiver getReceiver(AppModel.OutputDirection outputDirection) {
+    private void withReceiver(AppModel.OutputDirection outputDirection, Consumer<Receiver> worker) {
+        MidiDevice device = openDevice(appModel.getOutputDevice(outputDirection));
+        try (Receiver receiver = device.getReceiver()) {
+            worker.accept(receiver);
+        } catch (MidiUnavailableException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private MidiDevice openDevice(MidiDevice outputDevice) {
         try {
-            return appModel.getOutputDevice(outputDirection).getReceiver();
+            outputDevice.open();
+            return outputDevice;
         } catch (MidiUnavailableException e) {
             throw new RuntimeException(e);
         }
     }
 
     public void probeNoteOn() {
-        getReceiver(getDefaultDirection()).send(probeNoteOn, -1);
+        withReceiver(getDefaultDirection(), rcv -> rcv.send(probeNoteOn, -1));
     }
 
     public void probeNoteOff() {
-        getReceiver(getDefaultDirection()).send(probeNoteOff, -1);
+        withReceiver(getDefaultDirection(), rcv -> rcv.send(probeNoteOff, -1));
     }
 
     public void sendSoundWithDelay(SingleSound sound) {
@@ -70,11 +84,14 @@ public class SoundSender {
     }
 
     public void sendSound(SingleSound sound, boolean sendToEditBuffer, AppModel.OutputDirection outputDirection) {
+        if (sound.isEmpty()) {
+            return;
+        }
         if (sendToEditBuffer) {
-            getReceiver(outputDirection).send(sound.cloneForEditBuffer().sysEx, -1);
+            withReceiver(outputDirection, rcv -> rcv.send(sound.cloneForEditBuffer().getSysEx(), -1));
         } else {
-            System.out.println("Sending " + sound.name + " to bank " + sound.getBank() + " and slot " + sound.getSlot());
-            getReceiver(outputDirection).send(sound.sysEx, -1);
+            System.out.println("Sending " + sound.getName() + " to bank " + sound.getBank() + " and slot " + sound.getSlot());
+            withReceiver(outputDirection, rcv -> rcv.send(sound.getSysEx(), -1));
         }
     }
 }

@@ -1,5 +1,6 @@
 package org.iquality.cherubin;
 
+import javax.sound.midi.MidiMessage;
 import javax.sound.midi.Receiver;
 import javax.sound.midi.Sequence;
 import java.io.File;
@@ -45,5 +46,9 @@ public class SequenceModel {
 
     public void stopPlayingSequence() {
         appModel.stopPlayingSequence();
+    }
+
+    public void sendMidiMessage(MidiMessage message, AppModel.OutputDirection direction) {
+        appModel.sendMidiMessage(message, direction);
     }
 }

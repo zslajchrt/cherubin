@@ -7,13 +7,20 @@ import java.util.List;
 
 public interface AppExtension {
 
-    List<Component> getToolbarComponents();
+    Component getMainPanel();
+
+    List<Component> getToolBarComponents();
+
+    List<Component> getStatusBarComponents();
 
     void initialize();
 
     void close();
 
     default void onSelected() {
+    }
+
+    default void onDeselected() {
     }
 
     String getExtensionName();
