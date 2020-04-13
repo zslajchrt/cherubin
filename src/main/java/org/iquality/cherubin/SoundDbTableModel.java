@@ -14,23 +14,22 @@ public class SoundDbTableModel extends AbstractTableModel {
     public static final int COLUMN_NAME = 1;
     public static final int COLUMN_CATEGORY = 2;
     public static final int COLUMN_SOUNDSET = 3;
+    public static final int COLUMN_SYNTH = 4;
 
     private final SoundDbModel soundDbModel;
-    private final String[] columnNames = {"Id", "Name", "Category", "Sound Set"};
-    private List<SingleSound> listSounds;
-    private Predicate<SingleSound> categoryFilter = s -> true;
-    private Predicate<SoundSet<SingleSound>> soundSetFilter = s -> true;
+    private final String[] columnNames = {"Id", "Name", "Category", "Sound Set", "Synth"};
+    private List<Sound> listSounds;
+    private Predicate<Sound> synthFilter = s -> true;
+    private Predicate<Sound> categoryFilter = s -> true;
+    private Predicate<SoundSet<Sound>> soundSetFilter = s -> true;
 
-    private final List<Consumer<Iterable<SoundSet<SingleSound>>>> soundSetsListeners = Collections.synchronizedList(new ArrayList<>());
+    private final List<Consumer<Iterable<SynthFactory>>> synthListeners = Collections.synchronizedList(new ArrayList<>());
+    private final List<Consumer<Iterable<SoundSet<Sound>>>> soundSetsListeners = Collections.synchronizedList(new ArrayList<>());
     private final List<Consumer<Iterable<SoundCategory>>> categoriesListeners = Collections.synchronizedList(new ArrayList<>());
-
-    private final SoundSender soundSender;
 
     public SoundDbTableModel(SoundDbModel dbModel) {
         this.soundDbModel = dbModel;
         applyFiltersList();
-
-        this.soundSender = new SoundSender(soundDbModel.getAppModel());
     }
 
     public SoundDbModel getSoundDbModel() {
@@ -58,10 +57,12 @@ public class SoundDbTableModel extends AbstractTableModel {
             case COLUMN_ID:
                 return Integer.class;
             case COLUMN_NAME:
-                return SingleSound.class;
+                return Sound.class;
             case COLUMN_CATEGORY:
                 return SoundCategory.class;
             case COLUMN_SOUNDSET:
+                return String.class;
+            case COLUMN_SYNTH:
                 return String.class;
             default:
                 throw new IllegalArgumentException("Invalid column index");
@@ -70,11 +71,11 @@ public class SoundDbTableModel extends AbstractTableModel {
 
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-        SingleSound sound = listSounds.get(rowIndex);
+        Sound sound = listSounds.get(rowIndex);
         Object returnValue;
         switch (columnIndex) {
             case COLUMN_ID:
-                returnValue = sound.id;
+                returnValue = sound.getId();
                 break;
             case COLUMN_NAME:
                 returnValue = sound;
@@ -84,6 +85,9 @@ public class SoundDbTableModel extends AbstractTableModel {
                 break;
             case COLUMN_SOUNDSET:
                 returnValue = sound.getSoundSetName();
+                break;
+            case COLUMN_SYNTH:
+                returnValue = sound.getSynthFactory().getSynthId();
                 break;
             default:
                 throw new IllegalArgumentException("Invalid column index");
@@ -96,8 +100,13 @@ public class SoundDbTableModel extends AbstractTableModel {
     }
 
     private void applyFiltersList() {
-        listSounds = soundDbModel.getSoundSets().stream().filter(soundSetFilter).map(soundSet -> soundSet.sounds.stream().filter(categoryFilter)).flatMap(s -> s).collect(Collectors.toList());
+        listSounds = soundDbModel.getSoundSets().stream().filter(soundSetFilter).map(soundSet -> soundSet.sounds.stream().filter(categoryFilter).filter(synthFilter)).flatMap(s -> s).collect(Collectors.toList());
         fireTableDataChanged();
+    }
+
+    private void applySynthFilter(List<Object> checkedSynths) {
+        synthFilter = checkedSynths.isEmpty() ? sound -> true : sound -> checkedSynths.contains(sound.getSynthFactory());
+        applyFiltersList();
     }
 
     private void applyCategoryFilter(List<Object> checkedCategories) {
@@ -108,6 +117,20 @@ public class SoundDbTableModel extends AbstractTableModel {
     private void applySoundSetFilter(List<Object> checkedSoundSets) {
         soundSetFilter = checkedSoundSets.isEmpty() ? soundSet -> true : checkedSoundSets::contains;
         applyFiltersList();
+    }
+
+    public ListCheckListener getSynthFilterListener() {
+        return new ListCheckListener() {
+            @Override
+            public void removeCheck(ListEvent listEvent) {
+                applySynthFilter(listEvent.getSource().getCheckeds());
+            }
+
+            @Override
+            public void addCheck(ListEvent listEvent) {
+                applySynthFilter(listEvent.getSource().getCheckeds());
+            }
+        };
     }
 
     public ListCheckListener getCategoryFilterListener() {
@@ -138,15 +161,22 @@ public class SoundDbTableModel extends AbstractTableModel {
         };
     }
 
-    public void addSoundSet(SoundSet<SingleSound> soundSet) {
+    public void addSoundSet(SoundSet<Sound> soundSet) {
         soundDbModel.insertSoundSet(soundSet);
         applyFiltersList();
         fireSoundSetsChanged();
     }
 
     public void fire() {
+        fireSynthsChanged();
         fireCategoriesChanged();
         fireSoundSetsChanged();
+    }
+
+    private void fireSynthsChanged() {
+        for (Consumer<Iterable<SynthFactory>> synthsListener : synthListeners) {
+            synthsListener.accept(SynthFactoryRegistry.INSTANCE.getSynthFactories());
+        }
     }
 
     private void fireCategoriesChanged() {
@@ -156,34 +186,24 @@ public class SoundDbTableModel extends AbstractTableModel {
     }
 
     private void fireSoundSetsChanged() {
-        for (Consumer<Iterable<SoundSet<SingleSound>>> soundSetsListener : soundSetsListeners) {
+        for (Consumer<Iterable<SoundSet<Sound>>> soundSetsListener : soundSetsListeners) {
             soundSetsListener.accept(soundDbModel.getSoundSets());
         }
+    }
+
+    public Consumer<Consumer<Iterable<SynthFactory>>> getSynthNotifier() {
+        return synthListeners::add;
     }
 
     public Consumer<Consumer<Iterable<SoundCategory>>> getCategoriesNotifier() {
         return categoriesListeners::add;
     }
 
-    public Consumer<Consumer<Iterable<SoundSet<SingleSound>>>> getSoundSetsNotifier() {
+    public Consumer<Consumer<Iterable<SoundSet<Sound>>>> getSoundSetsNotifier() {
         return soundSetsListeners::add;
     }
 
     public void close() {
         this.soundDbModel.close();
-    }
-
-    public void sendSoundOn(SingleSound sound) {
-        soundSender.probeNoteOff();
-        soundSender.sendSound(sound, true);
-        soundSender.probeNoteOn();
-    }
-
-    public void sendSoundOff() {
-        soundSender.probeNoteOff();
-    }
-
-    public void sendSound(SingleSound sound, AppModel.OutputDirection outputDirection) {
-        soundSender.sendSound(sound, true, outputDirection);
     }
 }

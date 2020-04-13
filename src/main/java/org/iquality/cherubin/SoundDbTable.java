@@ -6,13 +6,11 @@ import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.datatransfer.DataFlavor;
-import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 public class SoundDbTable extends JTable {
-    public static final String SEND_SOUND = "sendSound";
     final SoundDbTableModel tableModel;
 
     public SoundDbTable(SoundDbTableModel soundDbTableModel) {
@@ -20,35 +18,14 @@ public class SoundDbTable extends JTable {
 
         tableModel = (SoundDbTableModel) getModel();
 
-        addMouseListener(new SoundSendingMouseAdapter<SingleSound>() {
-            @Override
-            protected SingleSound getValueAt(int row, int column) {
-                return (SingleSound) SoundDbTable.this.getValueAt(row, column);
-            }
-
-            @Override
-            protected void sendSound(SingleSound sound, AppModel.OutputDirection direction) {
-                tableModel.sendSound(sound, direction);
-                tableModel.getSoundDbModel().setEditedSound(sound);
-            }
-
-            @Override
-            protected void sendSoundOn(SingleSound sound) {
-                tableModel.sendSoundOn(sound);
-                tableModel.getSoundDbModel().setEditedSound(sound);
-            }
-
-            @Override
-            protected void sendSoundOff() {
-                tableModel.sendSoundOff();
-            }
-        });
+        soundDbTableModel.getSoundDbModel().installTableBehavior(this, SoundDbTableModel.COLUMN_NAME);
 
         TableColumnModel columnModel = getColumnModel();
         columnModel.getColumn(SoundDbTableModel.COLUMN_ID).setPreferredWidth(15);
         columnModel.getColumn(SoundDbTableModel.COLUMN_NAME).setPreferredWidth(180);
-        columnModel.getColumn(SoundDbTableModel.COLUMN_CATEGORY).setPreferredWidth(30);
-        columnModel.getColumn(SoundDbTableModel.COLUMN_SOUNDSET).setPreferredWidth(40);
+        columnModel.getColumn(SoundDbTableModel.COLUMN_CATEGORY).setPreferredWidth(20);
+        columnModel.getColumn(SoundDbTableModel.COLUMN_SOUNDSET).setPreferredWidth(60);
+        columnModel.getColumn(SoundDbTableModel.COLUMN_SYNTH).setPreferredWidth(50);
 
         DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer();
         cellRenderer.setHorizontalAlignment(JLabel.LEFT);
@@ -66,23 +43,9 @@ public class SoundDbTable extends JTable {
         sorter.setComparator(SoundDbTableModel.COLUMN_CATEGORY, Comparator.comparing(Object::toString));
         sorter.sort();
 
-
-        KeyStroke enter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0);
-        getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(enter, SEND_SOUND);
-        getActionMap().put(SEND_SOUND, new SendSoundAction(this, SoundDbTableModel.COLUMN_NAME) {
-            @Override
-            protected void onSound(SingleSound sound, boolean on) {
-                if (on) {
-                    tableModel.sendSoundOn(sound);
-                    tableModel.getSoundDbModel().setEditedSound(sound);
-                } else {
-                    tableModel.sendSoundOff();
-                }
-            }
-        });
     }
 
-    public static DataFlavor BLOFELD_SOUND_FLAVOR = new DataFlavor(DataFlavor.javaJVMLocalObjectMimeType + ";class=" + SingleSound.class.getName(), "Blofeld Sound");
+    public static DataFlavor BLOFELD_SOUND_FLAVOR = new DataFlavor(DataFlavor.javaJVMLocalObjectMimeType + ";class=" + Sound.class.getName(), "Sound");
 
     private static final DataFlavor[] soundClipboardFlavors;
 

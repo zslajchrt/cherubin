@@ -59,38 +59,38 @@ public class SoundSender {
         withReceiver(getDefaultDirection(), rcv -> rcv.send(probeNoteOff, -1));
     }
 
-    public void sendSoundWithDelay(SingleSound sound) {
-        sendSoundWithDelay(sound, getDefaultDirection());
+    public void sendSoundWithDelay(Sound sound, boolean sendEmpty) {
+        sendSoundWithDelay(sound, getDefaultDirection(), sendEmpty);
     }
 
-    public void sendSoundWithDelay(SingleSound sound, AppModel.OutputDirection outputDirection) {
-        sendSound(sound, outputDirection);
+    public void sendSoundWithDelay(Sound sound, AppModel.OutputDirection outputDirection, boolean sendEmpty) {
+        sendSound(sound, outputDirection, sendEmpty);
         try {
             Thread.sleep(SOUND_DUMP_DELAY);
         } catch (InterruptedException ignored) {
         }
     }
 
-    public void sendSound(SingleSound sound, boolean sendToEditBuffer) {
-        sendSound(sound, sendToEditBuffer, getDefaultDirection());
+    public void sendSound(Sound sound, boolean sendToEditBuffer, boolean sendEmpty) {
+        sendSound(sound, sendToEditBuffer, getDefaultDirection(), sendEmpty);
     }
 
     private AppModel.OutputDirection getDefaultDirection() {
         return appModel.getDefaultOutputDirection();
     }
 
-    public void sendSound(SingleSound sound, AppModel.OutputDirection outputDirection) {
-        sendSound(sound, false, outputDirection);
+    public void sendSound(Sound sound, AppModel.OutputDirection outputDirection, boolean sendEmpty) {
+        sendSound(sound, false, outputDirection, sendEmpty);
     }
 
-    public void sendSound(SingleSound sound, boolean sendToEditBuffer, AppModel.OutputDirection outputDirection) {
-        if (sound.isEmpty()) {
+    public void sendSound(Sound sound, boolean sendToEditBuffer, AppModel.OutputDirection outputDirection, boolean sendEmpty) {
+        if (!sendEmpty && sound.isEmpty()) {
             return;
         }
         if (sendToEditBuffer) {
             withReceiver(outputDirection, rcv -> rcv.send(sound.cloneForEditBuffer().getSysEx(), -1));
         } else {
-            System.out.println("Sending " + sound.getName() + " to bank " + sound.getBank() + " and slot " + sound.getSlot());
+            System.out.println("Sending " + sound.getName() + " to bank " + sound.getBank() + " and slot " + sound.getProgram());
             withReceiver(outputDirection, rcv -> rcv.send(sound.getSysEx(), -1));
         }
     }

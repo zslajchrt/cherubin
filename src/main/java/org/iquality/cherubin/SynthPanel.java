@@ -10,42 +10,42 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class VirtualBlofeldPanel extends JPanel implements AppExtension {
+public class SynthPanel extends JPanel implements AppExtension {
 
-    private final VirtualBlofeldModel blofeldModel;
+    private final SynthModel synthModel;
     private final JTabbedPane tabbedPane;
     private final List<JTable> tabTables = new ArrayList<>();
 
-    private final JLabel editedSound = new JLabel("Edited sound: N/A");
+    private final JLabel editedSound = new JLabel("No sound in buffer");
 
     private boolean isSelected;
 
-    public VirtualBlofeldPanel(VirtualBlofeldModel blofeldModel) {
+    public SynthPanel(SynthModel synthModel) {
         super(new BorderLayout());
-        this.blofeldModel = blofeldModel;
+        this.synthModel = synthModel;
         tabbedPane = new JTabbedPane();
-        for (int i = 0; i < VirtualBlofeldModel.BANKS_NUMBER; i++) {
-            VirtualBlofeldTableModel blofeldBankTableModel = new VirtualBlofeldTableModel(blofeldModel, i);
-            VirtualBlofeldTable blofeldBankTable = new VirtualBlofeldTable(blofeldBankTableModel);
-            tabbedPane.add(new JScrollPane(blofeldBankTable), "" + (char) ('A' + i));
-            tabTables.add(blofeldBankTable);
+        for (int i = 0; i < synthModel.getSynthFactory().getBankCount(); i++) {
+            SynthTableModel synthBankTableModel = new SynthTableModel(synthModel, i);
+            SynthBankTable synthBankTable = new SynthBankTable(synthBankTableModel);
+            tabbedPane.add(new JScrollPane(synthBankTable), "" + (char) ('A' + i));
+            tabTables.add(synthBankTable);
         }
 
-        VirtualBlofeldMultiTable blofeldMultiTable = new VirtualBlofeldMultiTable(new VirtualBlofeldMultiTableModel(blofeldModel, blofeldModel.getMultiBank()));
+        SynthMultiTable blofeldMultiTable = new SynthMultiTable(new SynthMultiTableModel(synthModel, synthModel.getMultiBank()));
         tabbedPane.add(new JScrollPane(blofeldMultiTable), "Multi");
         tabTables.add(blofeldMultiTable);
 
         add(tabbedPane, BorderLayout.CENTER);
 
-        blofeldModel.addSoundEditorModelListener(new SoundEditorModel.SoundEditorModelListener() {
+        synthModel.addSoundEditorModelListener(new SoundEditorModel.SoundEditorModelListener() {
             @Override
-            public void editedSoundSelected(SingleSound sound) {
-                editedSound.setText("Edited sound: " + sound);
+            public void editedSoundSelected(Sound sound) {
+                editedSound.setText("" + sound);
             }
 
             @Override
-            public void editedSoundUpdated(SingleSound sound) {
-                editedSound.setText("Edited sound: " + sound + "*");
+            public void editedSoundUpdated(Sound sound) {
+                editedSound.setText("" + sound + "*");
                 tabTables.forEach(jTable -> ((AbstractTableModel) jTable.getModel()).fireTableDataChanged());
 
                 int[] tabAndRow = new int[2];
@@ -65,7 +65,7 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
 
     }
 
-    private void findSoundInTable(SingleSound sound, int[] tabAndRow) {
+    private void findSoundInTable(Sound sound, int[] tabAndRow) {
         for (int tableIndex = 0; tableIndex < tabTables.size(); tableIndex++) {
             JTable table = tabTables.get(tableIndex);
             for (int row = 0; row < table.getRowCount(); row++) {
@@ -120,7 +120,7 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
         buttons.add(makeSaveButton());
         buttons.add(makeDeleteButton());
         buttons.add(makeUploadButton());
-        buttons.add(blofeldModel.makeSoundDumpCheckBox(() -> isSelected));
+        buttons.add(synthModel.makeSoundDumpCheckBox(() -> isSelected));
         return buttons;
     }
 
@@ -136,7 +136,7 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
             String name = JOptionPane.showInputDialog("Please enter the name: ");
             if (name != null) {
 
-                if (blofeldModel.exists(name)) {
+                if (synthModel.exists(name)) {
                     int input = JOptionPane.showConfirmDialog(null, "A Blofeld of this name already exists. Overwrite?", "Overwrite?", JOptionPane.YES_NO_OPTION);
                     switch (input) {
                         case 0: // YES
@@ -146,11 +146,11 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
                     }
                 }
 
-                if (blofeldModel.getBlofeld().isDirty()) {
+                if (synthModel.getSynth().isDirty()) {
                     int input = JOptionPane.showConfirmDialog(null, "Save edits?");
                     switch (input) {
                         case 0: // YES
-                            blofeldModel.saveBlofeld();
+                            synthModel.saveSynth();;
                             break;
                         case 1: // NO
                             break;
@@ -158,7 +158,7 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
                             return;
                     }
                 }
-                blofeldModel.newBlofeld(name);
+                synthModel.newSynth(name);
                 tabTables.forEach(tbl -> ((AbstractTableModel) tbl.getModel()).fireTableDataChanged());
             }
         }));
@@ -166,17 +166,17 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
 
     protected JButton makeLoadButton() {
         return AppFrame.makeButton("loadBlofeld", "Load a Virtual Blofeld", "Load", (actionEvent -> {
-            List<String> blofeldNamesList = blofeldModel.getBlofeldNames();
-            String[] blofeldNames = blofeldNamesList.toArray(new String[0]);
-            String blofeldName = (String) JOptionPane.showInputDialog(null, "Choose Blofeld...",
-                    "Load Virtual Blofeld", JOptionPane.QUESTION_MESSAGE, null, blofeldNames, "");
-            if (blofeldName != null && !"".equals(blofeldName)) {
+            List<String> synthInstList = synthModel.getSynthInstances();
+            String[] synthInstNames = synthInstList.toArray(new String[0]);
+            String synthInstName = (String) JOptionPane.showInputDialog(null, "Choose Blofeld...",
+                    "Load Virtual Blofeld", JOptionPane.QUESTION_MESSAGE, null, synthInstNames, "");
+            if (synthInstName != null && !"".equals(synthInstName)) {
 
-                if (blofeldModel.getBlofeld().isDirty()) {
+                if (synthModel.getSynth().isDirty()) {
                     int input = JOptionPane.showConfirmDialog(null, "Save edits?");
                     switch (input) {
                         case 0: // YES
-                            blofeldModel.saveBlofeld();
+                            synthModel.saveSynth();
                             break;
                         case 1: // NO
                             break;
@@ -185,20 +185,20 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
                     }
                 }
 
-                blofeldModel.loadBlofeld(blofeldName);
+                synthModel.loadSynth(synthInstName);
             }
         }));
     }
 
     protected JButton makeSaveButton() {
         return AppFrame.makeButton("saveBlofeld", "Save the Virtual Blofeld", "Save", (actionEvent -> {
-            blofeldModel.saveBlofeld();
+            synthModel.saveSynth();
         }));
     }
 
     protected JButton makeDeleteButton() {
         return AppFrame.makeButton("deleteBlofeld", "Delete the Virtual Blofeld", "Delete", (actionEvent -> {
-            if (blofeldModel.getBlofeld().isInitial()) {
+            if (synthModel.getSynthFactory().isInitial(synthModel.getSynth())) {
                 JOptionPane.showMessageDialog(null, "Initial Virtual Blofeld cannot be deleted", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
@@ -211,7 +211,7 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
                     return;
             }
 
-            blofeldModel.deleteBlofeld();
+            synthModel.deleteSynth();
         }));
     }
 
@@ -225,7 +225,7 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
                     return;
             }
 
-            blofeldModel.uploadBlofeld();
+            synthModel.uploadSynth();
         }));
     }
 
@@ -239,12 +239,12 @@ public class VirtualBlofeldPanel extends JPanel implements AppExtension {
                     if (!clipboard.isDataFlavorAvailable(SoundDbTable.BLOFELD_SOUND_FLAVOR)) {
                         return;
                     }
-                    SingleSound sound = (SingleSound) clipboard.getData(SoundDbTable.BLOFELD_SOUND_FLAVOR);
+                    Sound sound = (Sound) clipboard.getData(SoundDbTable.BLOFELD_SOUND_FLAVOR);
 
                     JTable selectedTab = tabTables.get(tabbedPane.getSelectedIndex());
-                    if (selectedTab instanceof VirtualBlofeldTable) {
+                    if (selectedTab instanceof SynthBankTable) {
                         int savedSelection = selectedTab.getSelectionModel().getMinSelectionIndex();
-                        ((VirtualBlofeldTable) selectedTab).updateSound(sound);
+                        ((SynthBankTable) selectedTab).updateSound(sound);
                         selectedTab.getSelectionModel().setSelectionInterval(savedSelection, savedSelection);
                     }
 

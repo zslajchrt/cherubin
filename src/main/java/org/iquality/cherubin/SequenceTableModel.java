@@ -62,12 +62,14 @@ public class SequenceTableModel extends AbstractTableModel {
                 returnValue = ev.getMessage().getLength();
                 break;
             case COLUMN_DESCRIPTION:
-                if (ev.getMessage() instanceof ShortMessage) {
-                    ShortMessage sm = (ShortMessage) ev.getMessage();
-                    return String.format("%s: %02X %02X %02X", sm.getClass().getSimpleName(), sm.getStatus(), sm.getData1(), sm.getData2());
-                } else {
-                    return String.format("%s: %02X", ev.getMessage().getClass().getSimpleName(), ev.getMessage().getStatus());
-                }
+                returnValue = ev;
+                break;
+//                if (ev.getMessage() instanceof ShortMessage) {
+//                    ShortMessage sm = (ShortMessage) ev.getMessage();
+//                    return String.format("%s: %02X %02X %02X", sm.getClass().getSimpleName(), sm.getStatus(), sm.getData1(), sm.getData2());
+//                } else {
+//                    return String.format("%s: %02X", ev.getMessage().getClass().getSimpleName(), ev.getMessage().getStatus());
+//                }
             default:
                 throw new IllegalArgumentException("Invalid column index");
         }

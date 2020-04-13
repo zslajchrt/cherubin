@@ -22,7 +22,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
     private final SoundDbModel soundDbModel;
     private final SoundDbTable soundDbTable;
-    private final JLabel editedSound = new JLabel("Edited sound: N/A");
+    private final JLabel editedSound = new JLabel("No sound in buffer");
 
     private boolean isSelected;
 
@@ -37,13 +37,13 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
         soundDbModel.addSoundEditorModelListener(new SoundEditorModel.SoundEditorModelListener() {
             @Override
-            public void editedSoundSelected(SingleSound sound) {
-                editedSound.setText("Edited sound: " + sound);
+            public void editedSoundSelected(Sound sound) {
+                editedSound.setText("" + sound);
             }
 
             @Override
-            public void editedSoundUpdated(SingleSound sound) {
-                editedSound.setText("Edited sound: " + sound + "*");
+            public void editedSoundUpdated(Sound sound) {
+                editedSound.setText("" + sound + "*");
                 soundDbTable.tableModel.fireTableDataChanged();
                 int soundRow = findSoundInTable(sound);
                 if (soundRow >= 0) {
@@ -55,7 +55,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
         });
     }
 
-    private int findSoundInTable(SingleSound sound) {
+    private int findSoundInTable(Sound sound) {
         for (int row = 0; row < soundDbTable.getRowCount(); row++) {
             Sound soundAtRow = (Sound) soundDbTable.getValueAt(row, SoundDbTableModel.COLUMN_NAME);
             if (soundAtRow == sound) {
@@ -101,6 +101,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
     @Override
     public java.util.List<Component> getToolBarComponents() {
         List<Component> components = new ArrayList<>();
+        components.add(makeSynthFilterCombo());
         components.add(makeCategoryFilterCombo());
         components.add(makeSoundSetFilterCombo());
         components.add(soundDbModel.makeSoundDumpCheckBox(() -> isSelected));
@@ -112,6 +113,10 @@ public class SoundDbPanel extends JPanel implements AppExtension {
         List<Component> components = new ArrayList<>();
         components.add(editedSound);
         return components;
+    }
+
+    CheckComboBox makeSynthFilterCombo() {
+        return makeFilterCombo(soundDbTable.tableModel.getSynthNotifier(), soundDbTable.tableModel.getSynthFilterListener());
     }
 
     CheckComboBox makeCategoryFilterCombo() {
@@ -149,7 +154,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
         return null;
     }
 
-    public static DataFlavor BLOFELD_SOUND_FLAVOR = new DataFlavor(DataFlavor.javaJVMLocalObjectMimeType + ";class=" + SingleSound.class.getName(), "Blofeld Sound");
+    public static DataFlavor BLOFELD_SOUND_FLAVOR = new DataFlavor(DataFlavor.javaJVMLocalObjectMimeType + ";class=" + Sound.class.getName(), "Sound");
 
     private static final DataFlavor[] soundClipboardFlavors;
 
@@ -160,7 +165,6 @@ public class SoundDbPanel extends JPanel implements AppExtension {
     @Override
     public Action getCopyAction() {
         return new AbstractAction() {
-
             {
                 setEnabled(false);
 
@@ -199,8 +203,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
                         if (row < 0) {
                             return null; // TODO
                         }
-                        int column = SoundDbTableModel.COLUMN_NAME; // The sound is the underlying object of the name column
-                        SingleSound sound = (SingleSound) soundDbTable.getValueAt(row, column);
+                        Sound sound = (Sound) soundDbTable.getValueAt(row, SoundDbTableModel.COLUMN_NAME);
 
                         if (DataFlavor.stringFlavor.equals(flavor)) {
                             return sound.toString();
@@ -217,7 +220,27 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
     @Override
     public Action getPasteAction() {
-        return null;
-    }
+        return new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Clipboard clipboard = getSystemClipboard();
+                try {
+                    if (!clipboard.isDataFlavorAvailable(SequencePanel.MIDI_EVENTS_FLAVOR)) {
+                        return;
+                    }
+                    MidiEvents events = (MidiEvents) clipboard.getData(SequencePanel.MIDI_EVENTS_FLAVOR);
 
+                    String soundSetName = JOptionPane.showInputDialog("Please enter sound set name: ");
+                    if (soundSetName != null) {
+                        SoundSet<Sound> soundSet = SoundDbModel.midiEventsToSoundSet(events, soundSetName);
+                        soundDbTable.tableModel.addSoundSet(soundSet);
+                        JOptionPane.showMessageDialog(null, soundSet.sounds.size() + " new sounds imported from " + events.getEvents().size(), "Sound import summary", JOptionPane.INFORMATION_MESSAGE);
+                    }
+
+                } catch (UnsupportedFlavorException | IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        };
+    }
 }

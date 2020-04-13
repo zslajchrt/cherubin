@@ -21,10 +21,10 @@ public class SoundCapture extends MidiPortCommunicator {
     static final byte MULTI_DUMP = 0x11;
 
     private final AtomicInteger soundCounter = new AtomicInteger();
-    private final Map<SoundCategory, Map<String, SingleSound>> soundBankByCategory = new HashMap<>();
-    private final Map<Integer, SingleSound> singleSoundBank = Collections.synchronizedMap(new TreeMap<>());
+    private final Map<SoundCategory, Map<String, Sound>> soundBankByCategory = new HashMap<>();
+    private final Map<Integer, Sound> singleSoundBank = Collections.synchronizedMap(new TreeMap<>());
     private final Map<Integer, MultiSound> multiSoundBank = Collections.synchronizedMap(new TreeMap<>());
-    public final SoundSet<SingleSound> soundSet;
+    public final SoundSet<Sound> soundSet;
 
     private final List<DumpListener> dumpListeners = Collections.synchronizedList(new ArrayList<>());
 
@@ -75,27 +75,29 @@ public class SoundCapture extends MidiPortCommunicator {
 
         }
 
-        private SingleSound storeSingle(SysexMessage message) {
-            byte[] msg = message.getMessage();
-            String soundName = new String(msg, SDATA_OFFSET + SINGLE_NAME_OFFSET, NAME_LENGTH);
-            int catId = msg[SDATA_OFFSET + SINGLE_CAT_OFFSET];
-            SoundCategory category = SoundCategory.CATEGORIES[catId];
+        private Sound storeSingle(SysexMessage message) {
+//            byte[] msg = message.getMessage();
+//            String soundName = new String(msg, SDATA_OFFSET + SINGLE_NAME_OFFSET, NAME_LENGTH);
+//            int catId = msg[SDATA_OFFSET + SINGLE_CAT_OFFSET];
+//            SoundCategory category = SoundCategory.CATEGORIES[catId];
+//
+//            SingleSound sound = new SingleSound(soundCounter.getAndIncrement(), soundName, category, message, soundSet.name);
+//            singleSoundBank.put(sound.getId(), sound);
+//            soundBankByCategory.computeIfAbsent(category, (cat) -> new HashMap<>()).put(soundName, sound);
 
-            SingleSound sound = new SingleSound(soundCounter.getAndIncrement(), soundName, category, message, soundSet.name);
-            singleSoundBank.put(sound.id, sound);
-            soundBankByCategory.computeIfAbsent(category, (cat) -> new HashMap<>()).put(soundName, sound);
-
-            return sound;
+//            return sound;
+            return null;
         }
 
         private MultiSound storeMulti(SysexMessage message) {
-            byte[] msg = message.getMessage();
-            String soundName = new String(msg, SDATA_OFFSET + MULTI_NAME_OFFSET, NAME_LENGTH);
-
-            MultiSound sound = new MultiSound(soundCounter.getAndIncrement(), soundName, message, null /* TODO */);
-            multiSoundBank.put(sound.id, sound);
-
-            return sound;
+//            byte[] msg = message.getMessage();
+//            String soundName = new String(msg, SDATA_OFFSET + MULTI_NAME_OFFSET, NAME_LENGTH);
+//
+//            MultiSound sound = new MultiSound(soundCounter.getAndIncrement(), soundName, message, null /* TODO */);
+//            multiSoundBank.put(sound.getId(), sound);
+//
+//            return sound;
+            return null;
         }
 
         private void printSysExDump(MidiMessage message, long timeStamp) {

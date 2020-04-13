@@ -11,8 +11,8 @@ public class MidiFileLoader {
     private final Sequencer sequencer;
 
     public interface LoadListener {
-        void onSound(SingleSound sound);
-        void onFinished(SoundSet<SingleSound> soundSet);
+        void onSound(Sound sound);
+        void onFinished(SoundSet<Sound> soundSet);
         void onError(Exception e);
     }
 
@@ -27,11 +27,11 @@ public class MidiFileLoader {
         }
     }
 
-    public SoundSet<SingleSound> load(File file, String dumpName, LoadListener listener) {
+    public SoundSet<Sound> load(File file, String dumpName, LoadListener listener) {
         try {
             SoundCapture soundCapture = new SoundCapture(sequencer, dumpName);
             if (listener != null) {
-                soundCapture.addDumpListener((SoundCapture.DumpListener<SingleSound>) listener::onSound);
+                soundCapture.addDumpListener((SoundCapture.DumpListener<Sound>) listener::onSound);
             }
             sequencer.open();
             try {
@@ -65,14 +65,14 @@ public class MidiFileLoader {
 
     public static void main(String[] args) {
         MidiFileLoader midiFileLoader = new MidiFileLoader();
-        SoundSet<SingleSound> dump = midiFileLoader.load(new File(args[0]), args[1], new LoadListener() {
+        SoundSet<Sound> dump = midiFileLoader.load(new File(args[0]), args[1], new LoadListener() {
             @Override
-            public void onSound(SingleSound sound) {
+            public void onSound(Sound sound) {
                 System.out.print(".");
             }
 
             @Override
-            public void onFinished(SoundSet<SingleSound> soundSet) {
+            public void onFinished(SoundSet<Sound> soundSet) {
                 System.out.println("");
                 System.out.println("Done");
             }

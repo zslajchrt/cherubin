@@ -1,32 +1,40 @@
 package org.iquality.cherubin;
 
-import javax.sound.midi.*;
+import javax.sound.midi.MidiDevice;
+import javax.sound.midi.MidiUnavailableException;
+import javax.sound.midi.SysexMessage;
+import javax.sound.midi.Transmitter;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class SoundEditorModel {
 
+    private static final Object SEND_SOUND = "sendSound";
+
+    private final SoundSender soundSender;
+
     private MidiDevice dumpInputDevice;
     private Transmitter dumpTransmitter;
-    private BlofeldDumpReceiver dumpReceiver;
+    private SoundDumpReceiver dumpReceiver;
 
     public interface SoundEditorModelListener {
-        void editedSoundSelected(SingleSound sound);
+        void editedSoundSelected(Sound sound);
 
-        void editedSoundUpdated(SingleSound sound);
+        void editedSoundUpdated(Sound sound);
     }
 
     protected final AppModel appModel;
     private final List<SoundEditorModelListener> soundEditorModelListeners = new ArrayList<>();
 
-    private SingleSound editedSound;
+    private Sound editedSound;
 
     public SoundEditorModel(AppModel appModel) {
         this.appModel = appModel;
+        this.soundSender = new SoundSender(appModel);
     }
 
     public void addSoundEditorModelListener(SoundEditorModelListener listener) {
@@ -37,23 +45,23 @@ public class SoundEditorModel {
         soundEditorModelListeners.remove(listener);
     }
 
-    private void fireEditedSoundSelected(SingleSound sound) {
+    private void fireEditedSoundSelected(Sound sound) {
         for (SoundEditorModelListener soundEditorModelListener : soundEditorModelListeners) {
             soundEditorModelListener.editedSoundSelected(sound);
         }
     }
 
-    private void fireEditedSoundUpdated(SingleSound sound) {
+    private void fireEditedSoundUpdated(Sound sound) {
         for (SoundEditorModelListener soundEditorModelListener : soundEditorModelListeners) {
             soundEditorModelListener.editedSoundUpdated(sound);
         }
     }
 
-    public SingleSound getEditedSound() {
+    public Sound getEditedSound() {
         return editedSound;
     }
 
-    public void setEditedSound(SingleSound sound) {
+    public void setEditedSound(Sound sound) {
         this.editedSound = sound;
         fireEditedSoundSelected(sound);
     }
@@ -66,18 +74,21 @@ public class SoundEditorModel {
             dumpInputDevice = appModel.getInputDevice(appModel.getDefaultInputDirection());
             dumpInputDevice.open();
             dumpTransmitter = dumpInputDevice.getTransmitter();
-            dumpReceiver = new BlofeldDumpReceiver() {
+            dumpReceiver = new SoundDumpReceiver() {
                 @Override
-                protected void onSingleSoundDump(String soundName, SoundCategory category, SysexMessage sysEx) {
-                    if (activeFlag.get()) {
-                        editedSound.update(soundName, sysEx, "", category);
+                protected void onSingleSoundDump(SysexMessage sysEx) {
+                    if (activeFlag.get() && !(editedSound instanceof MultiSound)) {
+                        editedSound.setSysEx(sysEx);
                         fireEditedSoundUpdated(editedSound);
                     }
                 }
 
                 @Override
-                protected void onMultiSoundDump(String soundName, SysexMessage sysEx) {
-                    // TODO
+                protected void onMultiSoundDump(SysexMessage sysEx) {
+                    if (activeFlag.get() && (editedSound instanceof MultiSound)) {
+                        editedSound.setSysEx(sysEx);
+                        fireEditedSoundUpdated(editedSound);
+                    }
                 }
             };
             dumpTransmitter.setReceiver(dumpReceiver);
@@ -97,6 +108,24 @@ public class SoundEditorModel {
         }
     }
 
+    public void sendSoundOn(Sound sound) {
+        soundSender.probeNoteOff();
+        soundSender.sendSound(sound, true, true);
+        soundSender.probeNoteOn();
+    }
+
+    public void sendSoundOff() {
+        soundSender.probeNoteOff();
+    }
+
+    public void sendSound(Sound sound, AppModel.OutputDirection outputDirection) {
+        soundSender.sendSound(sound, true, outputDirection, true);
+    }
+
+    public void sendSoundWithDelayIgnoreEmpty(Sound sound) {
+        soundSender.sendSoundWithDelay(sound, false);
+    }
+
     public Component makeSoundDumpCheckBox(Supplier<Boolean> activeFlag) {
         JCheckBox ch = new JCheckBox("Listen to dump");
         ch.addActionListener(e -> {
@@ -113,4 +142,47 @@ public class SoundEditorModel {
         });
         return ch;
     }
+
+    <T extends Sound> void installTableBehavior(JTable table, int soundColumn) {
+        table.addMouseListener(new SoundSendingMouseAdapter<T>() {
+            @Override
+            protected T getValueAt(int row, int column) {
+                return (T) table.getValueAt(row, soundColumn);
+            }
+
+            @Override
+            protected void sendSound(T sound, AppModel.OutputDirection direction) {
+                SoundEditorModel.this.sendSound(sound, direction);
+                SoundEditorModel.this.setEditedSound(sound);
+            }
+
+            @Override
+            protected void sendSoundOn(T sound) {
+                SoundEditorModel.this.sendSoundOn(sound);
+                SoundEditorModel.this.setEditedSound(sound);
+            }
+
+            @Override
+            protected void sendSoundOff() {
+                SoundEditorModel.this.sendSoundOff();
+            }
+        });
+
+
+        KeyStroke enter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0);
+        table.getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(enter, SEND_SOUND);
+        table.getActionMap().put(SEND_SOUND, new SendSoundAction(table, soundColumn) {
+            @Override
+            protected void onSound(Sound sound, boolean on) {
+                if (on) {
+                    SoundEditorModel.this.sendSoundOn(sound);
+                    SoundEditorModel.this.setEditedSound(sound);
+                } else {
+                    SoundEditorModel.this.sendSoundOff();
+                }
+            }
+        });
+
+    }
+
 }

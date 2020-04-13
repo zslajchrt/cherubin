@@ -9,6 +9,9 @@ import java.awt.*;
 import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.ArrayList;
@@ -28,7 +31,7 @@ public class AppFrame extends JFrame {
 
     private int currentlySelectedExt;
 
-    public AppFrame(AppModel appModel, SoundDbModel soundDbModel, VirtualBlofeldModel virtualBlofeldModel, int width, int height) throws HeadlessException {
+    public AppFrame(AppModel appModel, SoundDbModel soundDbModel, SynthModel synthModel, int width, int height) throws HeadlessException {
         super("Cherubin - Midi Librarian");
         this.appModel = appModel;
 
@@ -36,7 +39,7 @@ public class AppFrame extends JFrame {
 
         SequencePanel sequencePanel = new SequencePanel(new SequenceModel(appModel));
         SoundDbPanel soundDbTable = new SoundDbPanel(soundDbModel);
-        VirtualBlofeldPanel blofeldPanel = new VirtualBlofeldPanel(virtualBlofeldModel);
+        SynthPanel blofeldPanel = new SynthPanel(synthModel);
 
         appExtensions = new ArrayList<>();
         appExtensions.add(sequencePanel);
@@ -125,6 +128,7 @@ public class AppFrame extends JFrame {
             delegate = extActFn.apply(appExtensions.get(tabbedPane.getSelectedIndex()));
             if (delegate != null) {
                 setEnabled(delegate.isEnabled());
+                delegate.addPropertyChangeListener(this);
             } else {
                 setEnabled(false);
             }
@@ -190,21 +194,47 @@ public class AppFrame extends JFrame {
         //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("Avid 003 Rack Port 1", true);
         Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("VirtualMIDICable1", true);
         Supplier<MidiDevice> leftOut = () -> MidiPortCommunicator.findDevice("VirtualMIDICable2", false);
-        Supplier<MidiDevice> rightIn = () -> MidiPortCommunicator.findDevice("Blofeld", true);
-        Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Blofeld", false);
+        //Supplier<MidiDevice> rightIn = () -> MidiPortCommunicator.findDevice("Blofeld", true);
+        //Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Blofeld", false);
+        Supplier<MidiDevice> rightIn = NullMidiPort::new;
+        Supplier<MidiDevice> rightOut = NullMidiPort::new;
         AppModel appModel = new AppModel(leftIn, leftOut, rightIn, rightOut);
 
-        MidiProxy midiProxy = new MidiProxy(appModel, new MidiProxy.MidiProxyListener() {
-            @Override
-            public MidiMessage onMessage(MidiMessage message, long timeStamp, MidiProxy.Direction direction) {
-                return message;
-            }
-        });
+//        MidiProxy midiProxy = new MidiProxy(appModel, new MidiProxy.MidiProxyListener() {
+//            @Override
+//            public MidiMessage onMessage(MidiMessage message, long timeStamp, MidiProxy.Direction direction) {
+//                return message;
+//            }
+//        });
+//
+//        MidiDevice midiDevice = leftIn.get();
+//        midiDevice.open();
+//        midiDevice.getTransmitter().setReceiver(new Receiver() {
+//            @Override
+//            public void send(MidiMessage message, long timeStamp) {
+//                if (message instanceof SysexMessage) {
+//                    File f = new File("blofeld-init-multi.syx");
+//                    try (FileOutputStream fileOutputStream = new FileOutputStream(f)) {
+//                        fileOutputStream.write(message.getMessage());
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//
+//            @Override
+//            public void close() {
+//
+//            }
+//        });
+//
+//        System.in.read();
+//        midiDevice.open();
 
         Connection con = DriverManager.getConnection("jdbc:h2:/Users/zslajchrt/Music/Waldorf/Blofeld/Cherubin/allsounds;IFEXISTS=TRUE", "zbynek", "Ovation1");
         SoundDbModel soundDbModel = new SoundDbModel(appModel, con);
-        VirtualBlofeldModel virtualBlofeldModel = new VirtualBlofeldModel(con, appModel);
-        AppFrame main = new AppFrame(appModel, soundDbModel, virtualBlofeldModel, 800, 600);
+        SynthModel synthModel = new SynthModel(soundDbModel, SynthFactoryRegistry.INSTANCE.getSynthFactory("Blofeld"));
+        AppFrame main = new AppFrame(appModel, soundDbModel, synthModel, 800, 600);
         main.setVisible(true);
     }
 }

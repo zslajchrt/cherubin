@@ -1,15 +1,20 @@
 package org.iquality.cherubin;
 
+import javax.sound.midi.MidiEvent;
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.Receiver;
 import javax.sound.midi.ShortMessage;
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import java.awt.*;
-import java.awt.event.ComponentEvent;
-import java.awt.event.ComponentListener;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.*;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -18,6 +23,9 @@ public class SequencePanel extends JPanel implements AppExtension {
 
     private final SequenceModel sequenceModel;
     private final JTabbedPane tabbedPane;
+    private final List<SequenceTable> tabTables = new ArrayList<>();
+
+    private final CopyAction copyAction = new CopyAction();
 
     public SequencePanel(SequenceModel sequenceModel) {
         super(new BorderLayout());
@@ -31,8 +39,11 @@ public class SequencePanel extends JPanel implements AppExtension {
 
     private void rebuildTrackTabs() {
         tabbedPane.removeAll();
+        tabTables.clear();
         for (int i = 0; i < sequenceModel.getSequence().getTracks().length; i++) {
             SequenceTable sequenceTable = new SequenceTable(new SequenceTableModel(sequenceModel, i));
+            sequenceTable.getSelectionModel().addListSelectionListener(copyAction);
+            tabTables.add(sequenceTable);
             tabbedPane.add(new JScrollPane(sequenceTable), "Track " + (i + 1));
         }
         ((JScrollPane) tabbedPane.getSelectedComponent()).getViewport().getView().requestFocusInWindow();
@@ -165,4 +176,82 @@ public class SequencePanel extends JPanel implements AppExtension {
         }));
     }
 
+    public static DataFlavor MIDI_EVENTS_FLAVOR = new DataFlavor(DataFlavor.javaJVMLocalObjectMimeType + ";class=" + MidiEvents.class.getName(), "MIDI Events");
+
+    private static final DataFlavor[] clipboardFlavors;
+
+    static {
+        //clipboardFlavors = new DataFlavor[]{DataFlavor.stringFlavor, MIDI_EVENTS_FLAVOR};
+        clipboardFlavors = new DataFlavor[]{MIDI_EVENTS_FLAVOR};
+    }
+
+    @Override
+    public Action getCopyAction() {
+        return copyAction;
+    }
+
+    @Override
+    public Action getPasteAction() {
+        return null;
+    }
+
+    class CopyAction extends AbstractAction implements ListSelectionListener {
+
+        {
+            setEnabled(false);
+        }
+
+        @Override
+        public void valueChanged(ListSelectionEvent e) {
+            if (!e.getValueIsAdjusting()) {
+                setEnabled(true);
+            }
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Clipboard clipboard = getSystemClipboard();
+            clipboard.setContents(new Transferable() {
+                @Override
+                public DataFlavor[] getTransferDataFlavors() {
+                    return clipboardFlavors;
+                }
+
+                @Override
+                public boolean isDataFlavorSupported(DataFlavor flavor) {
+                    for (DataFlavor soundClipboardFlavor : clipboardFlavors) {
+                        if (soundClipboardFlavor.equals(flavor)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                @Override
+                public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+                    SequenceTable sequenceTable = tabTables.get(tabbedPane.getSelectedIndex());
+
+                    ListSelectionModel selectionModel = sequenceTable.getSelectionModel();
+                    int firstSelRow = selectionModel.getMinSelectionIndex();
+                    if (firstSelRow < 0) {
+                        return null; // TODO
+                    }
+                    int lastSelRow = selectionModel.getMaxSelectionIndex();
+                    List<MidiEvent> events = new ArrayList<>();
+                    for (int row = firstSelRow; row <= lastSelRow; row++) {
+                        if (selectionModel.isSelectedIndex(row)) {
+                            MidiEvent event = (MidiEvent) sequenceTable.getValueAt(row, SequenceTableModel.COLUMN_DESCRIPTION);
+                            events.add(event);
+                        }
+                    }
+
+                    if (MIDI_EVENTS_FLAVOR.equals(flavor)) {
+                        return new MidiEvents(events);
+                    } else {
+                        throw new UnsupportedFlavorException(flavor);
+                    }
+                }
+            }, null);
+        }
+    }
 }

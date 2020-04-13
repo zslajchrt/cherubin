@@ -3,9 +3,7 @@ package org.iquality.cherubin;
 import javax.swing.table.AbstractTableModel;
 import java.util.List;
 
-import static org.iquality.cherubin.VirtualBlofeldModel.BANK_SIZE;
-
-public class VirtualBlofeldTableModel extends AbstractTableModel implements VirtualBlofeldModel.BlofeldListener {
+public class SynthTableModel extends AbstractTableModel implements SynthModel.SynthModelListener {
     public static final int COLUMN_SLOT = 0;
     public static final int COLUMN_NAME = 1;
     public static final int COLUMN_CATEGORY = 2;
@@ -16,16 +14,16 @@ public class VirtualBlofeldTableModel extends AbstractTableModel implements Virt
 
     private final int bankNum;
 
-    private final VirtualBlofeldModel blofeldModel;
+    private final SynthModel synthModel;
 
-    public VirtualBlofeldTableModel(VirtualBlofeldModel blofeldModel, int bankNum) {
-        this.blofeldModel = blofeldModel;
+    public SynthTableModel(SynthModel synthModel, int bankNum) {
+        this.synthModel = synthModel;
         this.bankNum = bankNum;
-        blofeldModel.addBlofeldListener(this);
+        synthModel.addSynthModelListener(this);
     }
 
-    public VirtualBlofeldModel getBlofeldModel() {
-        return blofeldModel;
+    public SynthModel getSynthModel() {
+        return synthModel;
     }
 
     @Override
@@ -35,7 +33,7 @@ public class VirtualBlofeldTableModel extends AbstractTableModel implements Virt
 
     @Override
     public int getRowCount() {
-        return BANK_SIZE;
+        return synthModel.getSynthFactory().getBankSize();
     }
 
     @Override
@@ -50,7 +48,7 @@ public class VirtualBlofeldTableModel extends AbstractTableModel implements Virt
 
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-        SingleSound sound = getBank().get(rowIndex);
+        Sound sound = getBank().get(rowIndex);
         Object returnValue;
         switch (columnIndex) {
             case COLUMN_SLOT:
@@ -66,7 +64,7 @@ public class VirtualBlofeldTableModel extends AbstractTableModel implements Virt
                 returnValue = sound.getSoundSetName();
                 break;
             case COLUMN_REFID:
-                returnValue = sound.id;
+                returnValue = sound.getId();
                 break;
             default:
                 throw new IllegalArgumentException("Invalid column index");
@@ -74,38 +72,26 @@ public class VirtualBlofeldTableModel extends AbstractTableModel implements Virt
         return returnValue;
     }
 
-    private List<SingleSound> getBank() {
-        return blofeldModel.getBank(bankNum);
+    private List<Sound> getBank() {
+        return synthModel.getBank(bankNum);
     }
 
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
     }
 
-    public void updateSound(int slot, SingleSound sound) {
-        blofeldModel.getBlofeld().updateSound(bankNum, slot, sound);
+    public void updateSound(int slot, Sound sound) {
+        synthModel.getSynth().updateSound(bankNum, slot, sound);
         fireTableDataChanged();
     }
 
     @Override
-    public void blofeldChanged(VirtualBlofeld blofeld) {
+    public void synthChanged(Synth synth) {
         fireTableDataChanged();
     }
 
     public void deleteSound(int slot) {
-        blofeldModel.getBlofeld().deleteSound(bankNum, slot);
+        synthModel.getSynth().deleteSound(bankNum, slot);
         fireTableDataChanged();
-    }
-
-    public void sendSoundOn(SingleSound sound) {
-        blofeldModel.sendSoundOn(sound);
-    }
-
-    public void sendSoundOff() {
-        blofeldModel.sendSoundOff();
-    }
-
-    public void sendSound(SingleSound sound, AppModel.OutputDirection outputDirection) {
-        blofeldModel.sendSound(sound, outputDirection);
     }
 }

@@ -1,20 +1,21 @@
 package org.iquality.cherubin;
 
-import javax.sound.midi.SysexMessage;
+public interface MultiSound extends Sound {
 
-public class MultiSound extends Sound {
+    class SlotRef {
+        private final int bank;
+        private final int program;
 
-    public MultiSound(int id, String name, SysexMessage dump, String soundSetName) {
-        super(id, name, dump, soundSetName);
+        public SlotRef(int bank, int program) {
+            this.bank = bank;
+            this.program = program;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%s%s", (char) ('A' + bank), program + 1);
+        }
     }
 
-    @Override
-    protected MultiSound newInstance(int id, String name, SysexMessage dump, String soundSetName) {
-        return new MultiSound(id, name, dump, soundSetName);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%d: %s", id, getName());
-    }
+    SlotRef[] getSlotRefs();
 }
