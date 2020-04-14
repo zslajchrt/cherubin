@@ -323,7 +323,7 @@ public class AppModel {
             message = fixMessage(message);
             delegate.send(message, timeStamp);
             if (listener != null) {
-                //listener.send(message, timeStamp);
+                listener.send(message, timeStamp);
             }
         }
 

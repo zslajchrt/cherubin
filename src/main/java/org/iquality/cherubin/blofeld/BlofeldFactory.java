@@ -1,4 +1,8 @@
-package org.iquality.cherubin;
+package org.iquality.cherubin.blofeld;
+
+import org.iquality.cherubin.MultiSound;
+import org.iquality.cherubin.Sound;
+import org.iquality.cherubin.SynthFactory;
 
 import javax.sound.midi.SysexMessage;
 import java.util.ArrayList;

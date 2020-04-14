@@ -192,8 +192,10 @@ public class AppFrame extends JFrame {
     public static void main(String[] args) throws Exception {
 
         //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("Avid 003 Rack Port 1", true);
-        Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("VirtualMIDICable1", true);
+        //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("VirtualMIDICable1", true);
+        Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("Bass Station", true);
         Supplier<MidiDevice> leftOut = () -> MidiPortCommunicator.findDevice("VirtualMIDICable2", false);
+        //Supplier<MidiDevice> rightIn = () -> MidiPortCommunicator.findDevice("Bass Station", true);
         //Supplier<MidiDevice> rightIn = () -> MidiPortCommunicator.findDevice("Blofeld", true);
         //Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Blofeld", false);
         Supplier<MidiDevice> rightIn = NullMidiPort::new;

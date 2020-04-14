@@ -1,4 +1,8 @@
-package org.iquality.cherubin;
+package org.iquality.cherubin.blofeld;
+
+import org.iquality.cherubin.AbstractSound;
+import org.iquality.cherubin.MultiSound;
+import org.iquality.cherubin.SoundCategory;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;

@@ -1,5 +1,7 @@
 package org.iquality.cherubin;
 
+import org.iquality.cherubin.blofeld.BlofeldSingleSound;
+
 import java.util.List;
 
 public class Synth {

@@ -1,9 +1,6 @@
 package org.iquality.cherubin;
 
-import javax.sound.midi.MidiEvent;
-import javax.sound.midi.MidiMessage;
-import javax.sound.midi.Receiver;
-import javax.sound.midi.ShortMessage;
+import javax.sound.midi.*;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -118,13 +115,20 @@ public class SequencePanel extends JPanel implements AppExtension {
     protected JButton makeRecordButton() {
         return AppFrame.makeButton("recordSequence", "Record a sequence", "Record", (actionEvent -> {
             JButton button = (JButton) actionEvent.getSource();
+
+            final Color[] colors = new Color[2];
+            colors[0] = Color.RED;
+            colors[1] = button.getForeground();
+
             if ("recordSequence".equals(actionEvent.getActionCommand())) {
                 button.setActionCommand("stopRecording");
                 button.setText("Stop");
                 sequenceModel.recordSequence(new Receiver() {
+                    int cnt = 0;
+
                     @Override
                     public void send(MidiMessage message, long timeStamp) {
-                        System.out.println("R:" + timeStamp + ":" + message.getStatus());
+                        button.setForeground(colors[cnt++ % 2]);
                     }
 
                     @Override
@@ -136,6 +140,7 @@ public class SequencePanel extends JPanel implements AppExtension {
                 button.setText("Record");
                 sequenceModel.stopRecordingSequence();
                 rebuildTrackTabs();
+                button.setBackground(colors[1]);
             }
         }));
     }
@@ -149,11 +154,6 @@ public class SequencePanel extends JPanel implements AppExtension {
                 sequenceModel.playSequence(new Receiver() {
                     @Override
                     public void send(MidiMessage message, long timeStamp) {
-                        if (message instanceof ShortMessage) {
-                            System.out.printf("%s %d: %02X %02X %02X\n", message.getClass().getSimpleName(), timeStamp, message.getStatus(), ((ShortMessage) message).getData1(), ((ShortMessage) message).getData2());
-                        } else {
-                            //System.out.printf("%s %d: %02X\n", message.getClass().getSimpleName(), timeStamp, message.getStatus());
-                        }
                     }
 
                     @Override
@@ -231,19 +231,8 @@ public class SequencePanel extends JPanel implements AppExtension {
                 public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
                     SequenceTable sequenceTable = tabTables.get(tabbedPane.getSelectedIndex());
 
-                    ListSelectionModel selectionModel = sequenceTable.getSelectionModel();
-                    int firstSelRow = selectionModel.getMinSelectionIndex();
-                    if (firstSelRow < 0) {
-                        return null; // TODO
-                    }
-                    int lastSelRow = selectionModel.getMaxSelectionIndex();
-                    List<MidiEvent> events = new ArrayList<>();
-                    for (int row = firstSelRow; row <= lastSelRow; row++) {
-                        if (selectionModel.isSelectedIndex(row)) {
-                            MidiEvent event = (MidiEvent) sequenceTable.getValueAt(row, SequenceTableModel.COLUMN_DESCRIPTION);
-                            events.add(event);
-                        }
-                    }
+                    List<MidiEvent> events = sequenceTable.getSelectedEvents();
+                    if (events == null) return null;
 
                     if (MIDI_EVENTS_FLAVOR.equals(flavor)) {
                         return new MidiEvents(events);
@@ -251,7 +240,7 @@ public class SequencePanel extends JPanel implements AppExtension {
                         throw new UnsupportedFlavorException(flavor);
                     }
                 }
-            }, null);
+                }, null);
         }
     }
 }

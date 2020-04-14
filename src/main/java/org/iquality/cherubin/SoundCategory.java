@@ -1,6 +1,6 @@
 package org.iquality.cherubin;
 
-enum SoundCategory {
+public enum SoundCategory {
     Init,
     Arp,
     Atmo,
@@ -15,5 +15,5 @@ enum SoundCategory {
     Poly,
     Seq;
 
-    static SoundCategory[] CATEGORIES = values();
+    public static SoundCategory[] CATEGORIES = values();
 }

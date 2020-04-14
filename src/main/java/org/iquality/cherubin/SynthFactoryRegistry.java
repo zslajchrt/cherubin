@@ -1,5 +1,7 @@
 package org.iquality.cherubin;
 
+import org.iquality.cherubin.blofeld.BlofeldFactory;
+
 import javax.sound.midi.SysexMessage;
 import java.util.HashMap;
 import java.util.Map;

@@ -1,5 +1,7 @@
 package org.iquality.cherubin;
 
+import com.jhe.hexed.JHexEditor;
+
 import javax.sound.midi.MidiEvent;
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.ShortMessage;
@@ -9,6 +11,9 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SequenceTable extends JTable {
 
@@ -50,6 +55,21 @@ public class SequenceTable extends JTable {
             }
         });
 
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem hexViewItem = new JMenuItem(new AbstractAction("Hex View") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                List<MidiEvent> selectedEvents = getSelectedEvents();
+                if (selectedEvents.isEmpty()) {
+                    return;
+                }
+                Window mainWindow = SwingUtilities.windowForComponent(SequenceTable.this);
+                new HexViewFrame(mainWindow, selectedEvents.get(0).getMessage().getMessage()).setVisible(true);
+            }
+        });
+        popupMenu.add(hexViewItem);
+
+        setComponentPopupMenu(popupMenu);
     }
 
     private static class MidiEventCellRenderer extends DefaultTableCellRenderer {
@@ -81,5 +101,22 @@ public class SequenceTable extends JTable {
             cellComp.setText(text);
             return cellComp;
         }
+    }
+
+    public java.util.List<MidiEvent> getSelectedEvents() {
+        ListSelectionModel selectionModel = getSelectionModel();
+        int firstSelRow = selectionModel.getMinSelectionIndex();
+        if (firstSelRow < 0) {
+            return null;
+        }
+        int lastSelRow = selectionModel.getMaxSelectionIndex();
+        List<MidiEvent> events = new ArrayList<>();
+        for (int row = firstSelRow; row <= lastSelRow; row++) {
+            if (selectionModel.isSelectedIndex(row)) {
+                MidiEvent event = (MidiEvent) getValueAt(row, SequenceTableModel.COLUMN_DESCRIPTION);
+                events.add(event);
+            }
+        }
+        return events;
     }
 }
