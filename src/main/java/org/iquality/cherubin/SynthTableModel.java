@@ -43,7 +43,27 @@ public class SynthTableModel extends AbstractTableModel implements SynthModel.Sy
 
     @Override
     public Class<?> getColumnClass(int columnIndex) {
-        return getValueAt(0, columnIndex).getClass();
+        Class returnCls;
+        switch (columnIndex) {
+            case COLUMN_SLOT:
+                returnCls = Integer.class;
+                break;
+            case COLUMN_NAME:
+                returnCls = SingleSound.class;
+                break;
+            case COLUMN_CATEGORY:
+                returnCls = SoundCategory.class;
+                break;
+            case COLUMN_SOUNDSET:
+                returnCls = String.class;
+                break;
+            case COLUMN_REFID:
+                returnCls = Integer.class;
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid column index");
+        }
+        return returnCls;
     }
 
     @Override
@@ -72,17 +92,44 @@ public class SynthTableModel extends AbstractTableModel implements SynthModel.Sy
         return returnValue;
     }
 
+    public boolean isCellEditable(int rowIndex, int columnIndex) {
+        switch (columnIndex) {
+            case COLUMN_SLOT:
+                return false;
+            case COLUMN_NAME:
+                return true;
+            case COLUMN_CATEGORY:
+                return true;
+            case COLUMN_SOUNDSET:
+                return false;
+            default:
+                throw new IllegalArgumentException("Invalid column index");
+        }
+    }
+
     private List<Sound> getBank() {
         return synthModel.getBank(bankNum);
     }
 
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
+        switch (columnIndex) {
+            case COLUMN_CATEGORY:
+                Sound sound = getBank().get(rowIndex);
+                sound.setCategory((SoundCategory) value);
+                synthModel.updateSound((SingleSound) sound);
+                break;
+            default:
+                break;
+        }
     }
 
-    public void updateSound(int slot, Sound sound) {
-        synthModel.getSynth().updateSound(bankNum, slot, sound);
+    public boolean updateSound(int slot, Sound sound) {
+        if (!synthModel.getSynth().updateSound(bankNum, slot, sound)) {
+            return false;
+        }
         fireTableDataChanged();
+        return true;
     }
 
     @Override

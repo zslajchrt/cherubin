@@ -24,11 +24,13 @@ public interface Sound {
         return !isEmpty();
     }
 
-    byte getBank();
+    int getBank();
 
-    byte getProgram();
+    int getProgram();
 
-    Sound clone(byte programBank, byte programNumber);
+    Sound clone(int programBank, int programNumber);
 
     Sound cloneForEditBuffer();
+
+    void setCategory(SoundCategory value);
 }

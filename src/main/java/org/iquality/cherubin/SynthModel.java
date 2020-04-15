@@ -6,35 +6,37 @@ import java.util.List;
 
 public class SynthModel extends SoundEditorModel {
 
+    public static final SynthHeader INIT_MODEL_NAME = new SynthHeader(-1, "INIT", NullSynthFactory.INSTANCE);
     private final SoundDbModel soundDbModel;
-    private final SynthFactory synthFactory;
+
     private Synth synth;
 
-    public SynthModel(SoundDbModel soundDbModel, SynthFactory synthFactory) {
+    public SynthModel(SoundDbModel soundDbModel) {
         super(soundDbModel.getAppModel());
 
         this.soundDbModel = soundDbModel;
-        this.synthFactory = synthFactory;
 
-        loadSynth(synthFactory.getInitialName());
+        loadSynth(INIT_MODEL_NAME);
     }
 
     public SynthFactory getSynthFactory() {
-        return synthFactory;
+        return synth.getSynthFactory();
     }
 
-    public void loadSynth(String name) {
+    public void loadSynth(SynthHeader synthHeader) {
         try {
-            this.synth = soundDbModel.loadSynth(synthFactory, name);
-            assert synth.getBanks().size() == synthFactory.getBankCount();
+            this.synth = soundDbModel.loadSynth(synthHeader);
+            assert synth.getBanks().size() == this.synth.getSynthFactory().getBankCount();
             fireSynthChanged();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void newSynth(String name) {
-        soundDbModel.newSynth(synthFactory, name);
+    public Synth newSynth(String name, SynthFactory synthFactory) {
+        synth = soundDbModel.newSynth(synthFactory, name);
+        fireSynthChanged();
+        return synth;
     }
 
     public void saveSynth() {
@@ -42,12 +44,12 @@ public class SynthModel extends SoundEditorModel {
     }
 
     public boolean deleteSynth() {
-        if (synthFactory.isInitial(synth)) {
+        if (isInitialSynth()) {
             return false;
         }
 
         boolean deleted = soundDbModel.deleteSynth(synth);
-        loadSynth(synthFactory.getInitialName());
+        loadSynth(INIT_MODEL_NAME);
         return deleted;
     }
 
@@ -73,8 +75,20 @@ public class SynthModel extends SoundEditorModel {
         return soundDbModel.synthExists(name);
     }
 
-    public List<String> getSynthInstances() {
-        return soundDbModel.getSynthModels(synthFactory.getSynthId());
+    public List<SynthHeader> getSynthInstances() {
+        return soundDbModel.getSynthModels();
+    }
+
+    public void updateSound(SingleSound sound) {
+        soundDbModel.updateBankSound(sound);
+    }
+
+    public void updateMultiSound(MultiSound sound) {
+        soundDbModel.updateBankSound(sound);
+    }
+
+    public boolean isInitialSynth() {
+        return INIT_MODEL_NAME.getName().equals(synth.getName());
     }
 
     public interface SynthModelListener {

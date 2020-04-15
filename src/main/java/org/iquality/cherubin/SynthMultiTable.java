@@ -17,13 +17,17 @@ public class SynthMultiTable extends JTable {
 
         columnModel.getColumn(SynthMultiTableModel.COLUMN_SLOT).setPreferredWidth(35);
         columnModel.getColumn(SynthMultiTableModel.COLUMN_NAME).setPreferredWidth(190);
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < dm.getMultiSlotCount(); i++) {
             columnModel.getColumn(SynthMultiTableModel.COLUMN_SLOT_REF + i).setPreferredWidth(20);
+
+            JTextField soundRefField = new JTextField();
+            columnModel.getColumn(SynthMultiTableModel.COLUMN_SLOT_REF + i).setCellEditor(new DefaultCellEditor(soundRefField));
+
         }
 
         DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer();
         cellRenderer.setHorizontalAlignment(JLabel.LEFT);
-        columnModel.getColumn(SynthTableModel.COLUMN_SLOT).setCellRenderer(cellRenderer);
+        columnModel.getColumn(SynthMultiTableModel.COLUMN_SLOT).setCellRenderer(cellRenderer);
 
         DefaultTableCellRenderer soundNameSellRenderer = new DefaultTableCellRenderer() {
             @Override
@@ -31,9 +35,9 @@ public class SynthMultiTable extends JTable {
                 setText(((MultiSound) value).getName());
             }
         };
-        columnModel.getColumn(SynthTableModel.COLUMN_NAME).setCellRenderer(soundNameSellRenderer);
+        columnModel.getColumn(SynthMultiTableModel.COLUMN_NAME).setCellRenderer(soundNameSellRenderer);
 
-        tableModel.getSynthModel().installTableBehavior(this, SynthTableModel.COLUMN_NAME);
+        tableModel.getSynthModel().installTableBehavior(this, SynthMultiTableModel.COLUMN_NAME, -1);
 
     }
 

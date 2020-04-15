@@ -1,17 +1,19 @@
 package org.iquality.cherubin;
 
-import com.jhe.hexed.JHexEditor;
-
 import javax.sound.midi.MidiEvent;
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.ShortMessage;
 import javax.sound.midi.SysexMessage;
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ActionEvent;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,7 +37,7 @@ public class SequenceTable extends JTable {
 
         addMouseListener(new SoundSendingMouseAdapter<MidiMessage>() {
             @Override
-            protected MidiMessage getValueAt(int row, int column) {
+            protected MidiMessage getValueAt(int row) {
                 MidiEvent ev = sequenceTableModel.getTrack().get(row);
                 return ev.getMessage();
             }
@@ -56,18 +58,14 @@ public class SequenceTable extends JTable {
         });
 
         JPopupMenu popupMenu = new JPopupMenu();
-        JMenuItem hexViewItem = new JMenuItem(new AbstractAction("Hex View") {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                List<MidiEvent> selectedEvents = getSelectedEvents();
-                if (selectedEvents.isEmpty()) {
-                    return;
-                }
-                Window mainWindow = SwingUtilities.windowForComponent(SequenceTable.this);
-                new HexViewFrame(mainWindow, selectedEvents.get(0).getMessage().getMessage()).setVisible(true);
-            }
-        });
+        HexViewAction hexViewAction = new HexViewAction();
+        JMenuItem hexViewItem = new JMenuItem(hexViewAction);
+        getSelectionModel().addListSelectionListener(hexViewAction);
+        SaveSysExAction saveSysExAction = new SaveSysExAction();
+        getSelectionModel().addListSelectionListener(saveSysExAction);
+        JMenuItem saveSysExItem = new JMenuItem(saveSysExAction);
         popupMenu.add(hexViewItem);
+        popupMenu.add(saveSysExItem);
 
         setComponentPopupMenu(popupMenu);
     }
@@ -119,4 +117,66 @@ public class SequenceTable extends JTable {
         }
         return events;
     }
+
+    private abstract class SysExAction extends AbstractAction implements ListSelectionListener {
+
+        protected SysExAction(String name) {
+            super(name);
+        }
+
+        @Override
+        public void valueChanged(ListSelectionEvent e) {
+            List<MidiEvent> selectedEvents = getSelectedEvents();
+            if (!selectedEvents.isEmpty() && selectedEvents.get(0).getMessage() instanceof SysexMessage) {
+                setEnabled(true);
+            } else {
+                setEnabled(true);
+            }
+        }
+    }
+
+    private class HexViewAction extends SysExAction {
+        public HexViewAction() {
+            super("Hex View");
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            List<MidiEvent> selectedEvents = getSelectedEvents();
+            if (selectedEvents.isEmpty()) {
+                return;
+            }
+            Window mainWindow = SwingUtilities.windowForComponent(SequenceTable.this);
+            new HexViewFrame(mainWindow, selectedEvents.get(0).getMessage().getMessage()).setVisible(true);
+        }
+    }
+
+    private class SaveSysExAction extends SysExAction {
+        public SaveSysExAction() {
+            super("Save SysEx");
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            List<MidiEvent> selectedEvents = getSelectedEvents();
+            if (selectedEvents.isEmpty()) {
+                return;
+            }
+
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
+            int result = fileChooser.showSaveDialog(SequenceTable.this);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File file = fileChooser.getSelectedFile();
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    byte[] sysEx = selectedEvents.get(0).getMessage().getMessage();
+                    fos.write(sysEx);
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(null, "Action failed: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    throw new RuntimeException(ex);
+                }
+            }
+        }
+    }
+
 }

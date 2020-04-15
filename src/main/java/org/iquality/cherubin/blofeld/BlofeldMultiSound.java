@@ -6,22 +6,63 @@ import org.iquality.cherubin.SoundCategory;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class BlofeldMultiSound extends AbstractSound implements MultiSound, BlofeldSoundCommon {
 
     private static final String INIT_FILE_NAME = "blofeld-init-multi.syx";
     private static BlofeldSingleSound.BlofeldInitSysexMessage INIT_SYSEX;
 
-    static {
-        INIT_SYSEX = BlofeldSoundCommon.loadInitSysEx(INIT_FILE_NAME, 425);
+    class BlofeldSlotRef implements SlotRef {
+        private final int slotNum;
+
+        BlofeldSlotRef(int slotNum) {
+            this.slotNum = slotNum;
+        }
+
+        public int getBank() {
+            byte[] data = getSysEx().getMessage();
+            return data[MULTI_SLOTS_OFFSET + slotNum * MULTI_SLOT_LENGTH];
+        }
+
+        public void setRef(int bank, int program) {
+            updateSysEx(MULTI_SLOTS_OFFSET + slotNum * MULTI_SLOT_LENGTH, (byte) bank);
+            updateSysEx(MULTI_SLOTS_OFFSET + slotNum * MULTI_SLOT_LENGTH + 1, (byte) program);
+        }
+
+        public int getProgram() {
+            byte[] data = getSysEx().getMessage();
+            return data[MULTI_SLOTS_OFFSET + slotNum * MULTI_SLOT_LENGTH + 1];
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%s%s", (char) ('A' + getBank()), getProgram() + 1);
+        }
     }
+
+    public static final int MULTI_SOUND_MSG_LENGTH = 425;
+
+    static {
+        INIT_SYSEX = BlofeldSoundCommon.loadInitSysEx(INIT_FILE_NAME, MULTI_SOUND_MSG_LENGTH);
+    }
+
+    private final List<BlofeldSlotRef> slotRefs = new ArrayList<>();
+
+    private SoundCategory category = SoundCategory.Init;
 
     public BlofeldMultiSound() {
         super(-1, INIT_SYSEX, "", BlofeldFactory.INSTANCE);
     }
 
-    public BlofeldMultiSound(int id, SysexMessage sysEx, String soundSetName) {
+    public BlofeldMultiSound(int id, SysexMessage sysEx, SoundCategory category, String soundSetName) {
         super(id, sysEx, soundSetName, BlofeldFactory.INSTANCE);
+        this.category = category;
+        for (int i = 0; i < 16; i++ ) {
+            slotRefs.add(new BlofeldSlotRef(i));
+        }
     }
 
     @Override
@@ -32,16 +73,21 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
 
     @Override
     protected SoundCategory getCategoryImp() {
-        return SoundCategory.Init;
+        return category;
     }
 
     @Override
-    protected byte getBankImp() {
+    protected void setCategoryImp(SoundCategory category) {
+        this.category = category;
+    }
+
+    @Override
+    protected int getBankImp() {
         return 0;
     }
 
     @Override
-    protected byte getProgramImp() {
+    protected int getProgramImp() {
         byte[] msg = getSysEx().getMessage();
         return msg[PROGRAM_OFFSET];
     }
@@ -52,28 +98,19 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
     }
 
     @Override
-    public BlofeldMultiSound clone(byte programBank, byte programNumber) {
+    public BlofeldMultiSound clone(int programBank, int programNumber) {
         try {
             byte[] data = getSysEx().getMessage(); // getMessage() returns a copy
             data[BANK_OFFSET] = 0; // there is no bank for multi
-            data[PROGRAM_OFFSET] = programNumber;
-            return new BlofeldMultiSound(getId(), isEmpty() ? new BlofeldInitSysexMessage(data, data.length) : new SysexMessage(data, data.length), getSoundSetName());
+            data[PROGRAM_OFFSET] = (byte) programNumber;
+            return new BlofeldMultiSound(getId(), isEmpty() ? new BlofeldInitSysexMessage(data, data.length) : new SysexMessage(data, data.length), category, getSoundSetName());
         } catch (InvalidMidiDataException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public SlotRef[] getSlotRefs() {
-        byte[] data = getSysEx().getMessage();
-        SlotRef[] slotRefs = new SlotRef[16];
-
-        for (int slotNum = 0; slotNum < slotRefs.length; slotNum++) {
-            byte bank = data[MULTI_SLOTS_OFFSET + slotNum * MULTI_SLOT_LENGTH];
-            byte prg = data[MULTI_SLOTS_OFFSET + slotNum * MULTI_SLOT_LENGTH + 1];
-            slotRefs[slotNum] = new SlotRef(bank, prg);
-        }
-
-        return slotRefs;
+    public List<SlotRef> getSlotRefs() {
+        return Collections.unmodifiableList(slotRefs);
     }
 }

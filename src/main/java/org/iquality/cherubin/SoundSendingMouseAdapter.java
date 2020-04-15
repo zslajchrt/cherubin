@@ -7,7 +7,7 @@ import java.awt.event.MouseEvent;
 
 public abstract class SoundSendingMouseAdapter<T> extends MouseAdapter {
 
-    protected abstract T getValueAt(int row, int column);
+    protected abstract T getValueAt(int row);
 
     protected abstract void sendSound(T sound, AppModel.OutputDirection direction);
 
@@ -20,8 +20,7 @@ public abstract class SoundSendingMouseAdapter<T> extends MouseAdapter {
         if (e.getClickCount() == 2) {
             JTable target = (JTable) e.getSource();
             int row = target.getSelectedRow();
-            int column = SoundDbTableModel.COLUMN_NAME;
-            T sound = getValueAt(row, column);
+            T sound = getValueAt(row);
 
             if ((e.getModifiersEx() & (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) == (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) {
                 sendSound(sound, AppModel.OutputDirection.both);

@@ -8,7 +8,6 @@ import java.awt.event.KeyEvent;
 public class SynthBankTable extends JTable {
 
     public static final String DELETE_SOUND = "deleteSound";
-    public static final String SEND_SOUND = "sendSound";
 
     private final SynthTableModel tableModel;
 
@@ -37,7 +36,7 @@ public class SynthBankTable extends JTable {
         };
         columnModel.getColumn(SynthTableModel.COLUMN_NAME).setCellRenderer(soundNameSellRenderer);
 
-        tableModel.getSynthModel().installTableBehavior(this, SynthTableModel.COLUMN_NAME);
+        tableModel.getSynthModel().installTableBehavior(this, SynthTableModel.COLUMN_NAME, SynthTableModel.COLUMN_CATEGORY);
 
         KeyStroke deleteKey = KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0);
         getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(deleteKey, DELETE_SOUND);
@@ -57,12 +56,12 @@ public class SynthBankTable extends JTable {
         });
     }
 
-    public void updateSound(Sound sound) {
+    public boolean updateSound(Sound sound) {
         int row = getSelectedRow();
         if (row < 0) {
             row = findFirstAvailableRow();
         }
-        tableModel.updateSound(row, sound);
+        return tableModel.updateSound(row, sound);
     }
 
     private int findFirstAvailableRow() {

@@ -69,6 +69,23 @@ public class SoundDbTableModel extends AbstractTableModel {
         }
     }
 
+    public boolean isCellEditable(int rowIndex, int columnIndex) {
+        switch (columnIndex) {
+            case COLUMN_ID:
+                return false;
+            case COLUMN_NAME:
+                return true;
+            case COLUMN_CATEGORY:
+                return true;
+            case COLUMN_SOUNDSET:
+                return false;
+            case COLUMN_SYNTH:
+                return false;
+            default:
+                throw new IllegalArgumentException("Invalid column index");
+        }
+    }
+
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
         Sound sound = listSounds.get(rowIndex);
@@ -97,6 +114,15 @@ public class SoundDbTableModel extends AbstractTableModel {
 
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
+        switch (columnIndex) {
+            case COLUMN_CATEGORY:
+                Sound sound = listSounds.get(rowIndex);
+                sound.setCategory((SoundCategory) value);
+                soundDbModel.updateSound(sound);
+                break;
+            default:
+                break;
+        }
     }
 
     private void applyFiltersList() {

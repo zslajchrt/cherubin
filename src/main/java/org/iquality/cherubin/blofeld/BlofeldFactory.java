@@ -1,27 +1,42 @@
 package org.iquality.cherubin.blofeld;
 
-import org.iquality.cherubin.MultiSound;
-import org.iquality.cherubin.Sound;
-import org.iquality.cherubin.SynthFactory;
+import org.iquality.cherubin.*;
 
 import javax.sound.midi.SysexMessage;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class BlofeldFactory implements SynthFactory {
 
     public static final int BANKS_COUNT = 8;
     public static final int BANK_SIZE = 128;
+
     public static final SynthFactory INSTANCE = new BlofeldFactory();
 
     @Override
-    public Sound createSound(int id, SysexMessage sysexMessage, String soundSetName) {
+    public List<Sound> createSounds(SysexMessage sysexMessage, String soundSetName) {
+        return Collections.singletonList(createSingleSound(-1, "", sysexMessage, SoundCategory.Init, soundSetName));
+    }
+
+    @Override
+    public Sound createSingleSound(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
         assert accepts(sysexMessage);
         if (isMulti(sysexMessage)) {
-            return new BlofeldMultiSound(id, sysexMessage, soundSetName);
+            return new BlofeldMultiSound(id, sysexMessage, category, soundSetName);
         } else {
+            // ignore name and category as they are encoded in sysex
             return new BlofeldSingleSound(id, sysexMessage, soundSetName);
         }
+    }
+
+    @Override
+    public SingleSound createSingleSound() {
+        return new BlofeldSingleSound();
+    }
+
+    @Override
+    public MultiSound createMultiSound() {
+        return new BlofeldMultiSound();
     }
 
     @Override
@@ -46,21 +61,8 @@ public class BlofeldFactory implements SynthFactory {
     }
 
     @Override
-    public List<Sound> createBank(int bankNum) {
-        List<Sound> bankList = new ArrayList<>();
-        for (int program = 0; program < BANK_SIZE; program++) {
-            bankList.add(new BlofeldSingleSound().clone((byte) bankNum, (byte) program));
-        }
-        return bankList;
-    }
-
-    @Override
-    public List<MultiSound> createMulti() {
-        List<MultiSound> bankList = new ArrayList<>();
-        for (int program = 0; program < BANK_SIZE; program++) {
-            bankList.add(new BlofeldMultiSound().clone((byte)0, (byte) program));
-        }
-        return bankList;
+    public int getMultiSlotCount() {
+        return 16;
     }
 
     @Override
@@ -74,6 +76,11 @@ public class BlofeldFactory implements SynthFactory {
     }
 
     @Override
+    public boolean hasMultiBank() {
+        return true;
+    }
+
+    @Override
     public int getMultiBankSize() {
         return BANK_SIZE;
     }
@@ -81,11 +88,6 @@ public class BlofeldFactory implements SynthFactory {
     @Override
     public String getSynthId() {
         return "Blofeld";
-    }
-
-    @Override
-    public String getInitialName() {
-        return "INIT";
     }
 
     @Override

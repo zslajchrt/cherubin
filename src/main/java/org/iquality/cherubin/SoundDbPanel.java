@@ -233,8 +233,12 @@ public class SoundDbPanel extends JPanel implements AppExtension {
                     String soundSetName = JOptionPane.showInputDialog("Please enter sound set name: ");
                     if (soundSetName != null) {
                         SoundSet<Sound> soundSet = SoundDbModel.midiEventsToSoundSet(events, soundSetName);
-                        soundDbTable.tableModel.addSoundSet(soundSet);
-                        JOptionPane.showMessageDialog(null, soundSet.sounds.size() + " new sounds imported from " + events.getEvents().size(), "Sound import summary", JOptionPane.INFORMATION_MESSAGE);
+                        if (soundSet != null) {
+                            soundDbTable.tableModel.addSoundSet(soundSet);
+                            JOptionPane.showMessageDialog(null, soundSet.sounds.size() + " new sounds imported from " + events.getEvents().size(), "Sound import summary", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(null, "No synth factory found for sysex", "Sound import error", JOptionPane.ERROR_MESSAGE);
+                        }
                     }
 
                 } catch (UnsupportedFlavorException | IOException ex) {

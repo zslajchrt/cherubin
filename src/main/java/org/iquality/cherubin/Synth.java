@@ -4,28 +4,17 @@ import org.iquality.cherubin.blofeld.BlofeldSingleSound;
 
 import java.util.List;
 
-public class Synth {
+public class Synth extends SynthHeader {
 
-    private final int id;
-    private final String name;
     private final List<List<Sound>> banks;
     private final List<MultiSound> multi;
 
     private boolean dirty;
 
-    public Synth(int id, String name, List<List<Sound>> banks, List<MultiSound> multi) {
-        this.id = id;
-        this.name = name;
+    public Synth(int id, String name, List<List<Sound>> banks, List<MultiSound> multi, SynthFactory synthFactory) {
+        super(id, name, synthFactory);
         this.banks = banks;
         this.multi = multi;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
     }
 
     public List<List<Sound>> getBanks() {
@@ -36,9 +25,15 @@ public class Synth {
         return multi;
     }
 
-    public void updateSound(int bankNum, int slot, Sound sound) {
+    public boolean updateSound(int bankNum, int slot, Sound sound) {
+        if (sound.getSynthFactory() != getSynthFactory()) {
+            return false;
+        }
+
         banks.get(bankNum).set(slot, sound.clone((byte) bankNum, (byte) slot));
         dirty = true;
+
+        return true;
     }
 
     public boolean isDirty() {

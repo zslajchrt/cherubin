@@ -1,5 +1,6 @@
 package org.iquality.cherubin;
 
+import org.iquality.cherubin.bassStation2.BS2Factory;
 import org.iquality.cherubin.blofeld.BlofeldFactory;
 
 import javax.sound.midi.SysexMessage;
@@ -13,7 +14,9 @@ public class SynthFactoryRegistry {
     private final Map<String, SynthFactory> factoryMap = new HashMap<>();
 
     public SynthFactoryRegistry() {
-        factoryMap.put("Blofeld", BlofeldFactory.INSTANCE);
+        factoryMap.put(NullSynthFactory.INSTANCE.getSynthId(), NullSynthFactory.INSTANCE);
+        factoryMap.put(BlofeldFactory.INSTANCE.getSynthId(), BlofeldFactory.INSTANCE);
+        factoryMap.put(BS2Factory.INSTANCE.getSynthId(), BS2Factory.INSTANCE);
     }
 
     public SynthFactory getSynthFactory(String synthId) {

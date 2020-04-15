@@ -68,7 +68,7 @@ public class SequencePanel extends JPanel implements AppExtension {
 
     @Override
     public Component getMainPanel() {
-        return new JScrollPane(this);
+        return this;
     }
 
     @Override

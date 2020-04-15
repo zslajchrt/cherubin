@@ -192,14 +192,15 @@ public class AppFrame extends JFrame {
     public static void main(String[] args) throws Exception {
 
         //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("Avid 003 Rack Port 1", true);
-        //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("VirtualMIDICable1", true);
-        Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("Bass Station", true);
+        Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("VirtualMIDICable1", true);
+        //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("Bass Station", true);
         Supplier<MidiDevice> leftOut = () -> MidiPortCommunicator.findDevice("VirtualMIDICable2", false);
-        //Supplier<MidiDevice> rightIn = () -> MidiPortCommunicator.findDevice("Bass Station", true);
+        Supplier<MidiDevice> rightIn = () -> MidiPortCommunicator.findDevice("Bass Station", true);
         //Supplier<MidiDevice> rightIn = () -> MidiPortCommunicator.findDevice("Blofeld", true);
         //Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Blofeld", false);
-        Supplier<MidiDevice> rightIn = NullMidiPort::new;
-        Supplier<MidiDevice> rightOut = NullMidiPort::new;
+        //Supplier<MidiDevice> rightIn = NullMidiPort::new;
+        //Supplier<MidiDevice> rightOut = NullMidiPort::new;
+        Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Bass Station", false);
         AppModel appModel = new AppModel(leftIn, leftOut, rightIn, rightOut);
 
 //        MidiProxy midiProxy = new MidiProxy(appModel, new MidiProxy.MidiProxyListener() {
@@ -235,7 +236,7 @@ public class AppFrame extends JFrame {
 
         Connection con = DriverManager.getConnection("jdbc:h2:/Users/zslajchrt/Music/Waldorf/Blofeld/Cherubin/allsounds;IFEXISTS=TRUE", "zbynek", "Ovation1");
         SoundDbModel soundDbModel = new SoundDbModel(appModel, con);
-        SynthModel synthModel = new SynthModel(soundDbModel, SynthFactoryRegistry.INSTANCE.getSynthFactory("Blofeld"));
+        SynthModel synthModel = new SynthModel(soundDbModel);
         AppFrame main = new AppFrame(appModel, soundDbModel, synthModel, 800, 600);
         main.setVisible(true);
     }

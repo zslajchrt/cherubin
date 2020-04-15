@@ -4,6 +4,7 @@ import com.sun.media.sound.MidiUtils;
 
 import javax.sound.midi.*;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.function.Supplier;
 
@@ -115,9 +116,27 @@ public class AppModel {
     }
 
     public Sequence loadSequence(File file) {
+
         try {
-            return MidiSystem.getSequence(file);
-        } catch (InvalidMidiDataException | IOException e) {
+            if (file.getName().endsWith(".syx")) {
+                // Load a single sysex file and create a single-track/single-event MIDI sequence
+                Sequence sequence = new Sequence(Sequence.SMPTE_24, 10);
+                Track track = sequence.createTrack();
+
+                int length = (int) file.length();
+                byte[] data = new byte[length];
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    int rc = fis.read(data);
+                    assert rc == length;
+                    track.add(new MidiEvent(new SysexMessage(data, data.length), 0));
+                    return sequence;
+                }
+
+            } else {
+                // Load a MIDI file
+                return MidiSystem.getSequence(file);
+            }
+        } catch(InvalidMidiDataException | IOException e){
             throw new RuntimeException(e);
         }
     }

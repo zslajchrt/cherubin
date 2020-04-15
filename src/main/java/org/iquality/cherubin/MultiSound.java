@@ -1,21 +1,19 @@
 package org.iquality.cherubin;
 
+import java.util.List;
+
 public interface MultiSound extends Sound {
 
-    class SlotRef {
-        private final int bank;
-        private final int program;
+    interface SlotRef {
+        int getBank();
 
-        public SlotRef(int bank, int program) {
-            this.bank = bank;
-            this.program = program;
-        }
+        void setRef(int bank, int program);
 
-        @Override
-        public String toString() {
-            return String.format("%s%s", (char) ('A' + bank), program + 1);
-        }
+        int getProgram();
     }
 
-    SlotRef[] getSlotRefs();
+    List<SlotRef> getSlotRefs();
+
+    @Override
+    MultiSound clone(int programBank, int programNumber);
 }

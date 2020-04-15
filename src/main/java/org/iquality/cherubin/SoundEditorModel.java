@@ -143,10 +143,10 @@ public class SoundEditorModel {
         return ch;
     }
 
-    <T extends Sound> void installTableBehavior(JTable table, int soundColumn) {
+    <T extends Sound> void installTableBehavior(JTable table, int soundColumn, int categoriesColumn) {
         table.addMouseListener(new SoundSendingMouseAdapter<T>() {
             @Override
-            protected T getValueAt(int row, int column) {
+            protected T getValueAt(int row) {
                 return (T) table.getValueAt(row, soundColumn);
             }
 
@@ -183,6 +183,12 @@ public class SoundEditorModel {
             }
         });
 
+        table.setColumnSelectionAllowed(true);
+
+        if (categoriesColumn >= 0) {
+            JComboBox<SoundCategory> categoryComboBox = new JComboBox<>(SoundCategory.CATEGORIES);
+            table.getColumnModel().getColumn(SoundDbTableModel.COLUMN_CATEGORY).setCellEditor(new DefaultCellEditor(categoryComboBox));
+        }
     }
 
 }
