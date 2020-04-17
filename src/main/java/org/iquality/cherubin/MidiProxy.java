@@ -7,43 +7,24 @@ import static org.iquality.cherubin.MidiPortCommunicator.findDevice;
 
 public class MidiProxy {
 
-    public enum Direction {
-        leftToRight,
-        rightToLeft,
-    }
-
     public interface MidiProxyListener {
-        MidiMessage onMessage(MidiMessage message, long timeStamp, Direction direction);
+        MidiMessage onMessage(MidiMessage message, long timeStamp);
     }
 
-    private final MidiDevice leftIn;
-    private final Transmitter leftInTransmitter;
-    private final MidiDevice leftOut;
-    private final Receiver leftOutReceiver;
-    private final MidiDevice rightIn;
-    private final Transmitter rightInTransmitter;
-    private final MidiDevice rightOut;
-    private final Receiver rightOutReceiver;
+    private final MidiDevice in;
+    private final MidiDevice out;
+    private final Transmitter transmitter;
+    private final Receiver receiver;
 
-    public MidiProxy(AppModel appModel) {
-        this(appModel, (msg, ts, dir) -> msg);
-    }
-
-    public MidiProxy(AppModel appModel, MidiProxyListener listener) {
+    public MidiProxy(MidiDevice in, MidiDevice out, MidiProxyListener listener) {
         try {
-            this.leftIn = open(appModel.getInputDevice(AppModel.InputDirection.left));
-            this.leftOut = open(appModel.getOutputDevice(AppModel.OutputDirection.left));
-            this.rightIn = open(appModel.getInputDevice(AppModel.InputDirection.right));
-            this.rightOut = open(appModel.getOutputDevice(AppModel.OutputDirection.right));
+            this.in = open(in);
+            this.out = open(out);
 
-            leftInTransmitter = leftIn.getTransmitter();
-            rightInTransmitter = rightIn.getTransmitter();
+            this.transmitter = in.getTransmitter();
+            this.receiver = out.getReceiver();
 
-            leftOutReceiver = leftOut.getReceiver();
-            rightOutReceiver = rightOut.getReceiver();
-
-            leftInTransmitter.setReceiver(new CapturingReceiver(rightOutReceiver, Direction.leftToRight, listener));
-            rightInTransmitter.setReceiver(new CapturingReceiver(leftOutReceiver, Direction.rightToLeft, listener));
+            transmitter.setReceiver(new CapturingReceiver(receiver, listener));
         } catch (MidiUnavailableException e) {
             throw new RuntimeException(e);
         }
@@ -56,40 +37,25 @@ public class MidiProxy {
 
     public void close() {
         try {
-            try {
-                this.leftIn.close();
-            } finally {
-                try {
-                    this.leftOut.open();
-                } finally {
-                    try {
-                        this.rightIn.open();
-                    } finally {
-                        this.rightOut.open();
-                    }
-                }
-            }
-        } catch (MidiUnavailableException e) {
-            throw new RuntimeException(e);
+            this.receiver.close();
+        } finally {
+            this.transmitter.close();
         }
     }
-
 
     static class CapturingReceiver implements Receiver {
 
         private final Receiver receiver;
-        private final Direction direction;
         private final MidiProxyListener listener;
 
-        public CapturingReceiver(Receiver receiver, Direction direction, MidiProxyListener listener) {
+        public CapturingReceiver(Receiver receiver, MidiProxyListener listener) {
             this.receiver = receiver;
-            this.direction = direction;
             this.listener = listener;
         }
 
         @Override
         public void send(MidiMessage message, long timeStamp) {
-            MidiMessage alteredMessage = listener.onMessage(message, timeStamp, direction);
+            MidiMessage alteredMessage = listener.onMessage(message, timeStamp);
             receiver.send(alteredMessage == null ? message : alteredMessage, timeStamp);
         }
 

@@ -9,27 +9,29 @@ public abstract class SendSoundAction extends AbstractAction {
     private final int soundColumn;
 
     private Sound sounding;
+    private int outputVariant;
 
     public SendSoundAction(JTable table, int soundColumn) {
         this.table = table;
         this.soundColumn = soundColumn;
     }
 
-    protected abstract void onSound(Sound sound, boolean on);
+    protected abstract void onSound(Sound sound, int outputVariant, boolean on);
 
     @Override
     public void actionPerformed(ActionEvent e) {
         JTable target = (JTable) e.getSource();
         int row = target.getSelectedRow();
-        int column = SoundDbTableModel.COLUMN_NAME;
         Sound selectedSound = (Sound) table.getValueAt(row, soundColumn);
 
         if (sounding == null || selectedSound != sounding) {
             sounding = selectedSound;
-            onSound(sounding, true);
+            outputVariant = SoundEditorModel.getOutputVariant(e.getModifiers());
+            onSound(sounding, outputVariant, true);
         } else {
-            onSound(sounding, false);
+            onSound(sounding, outputVariant, false);
             sounding = null;
+            outputVariant = -1;
         }
     }
 }

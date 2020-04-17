@@ -6,7 +6,6 @@ import javax.sound.midi.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.function.Supplier;
 
 public class AppModel {
 
@@ -15,102 +14,92 @@ public class AppModel {
     private ReceiverWrapper playingReceiver;
     private ReceiverWrapper recordingReceiver;
 
-    public enum OutputDirection {
-        none(0),
-        left(1),
-        right(2),
-        both(3),
-        def(4);
-
-        final int mask;
-
-        OutputDirection(int mask) {
-            this.mask = mask;
-        }
-
-        public static OutputDirection forMask(int newMask) {
-            switch (newMask) {
-                case 0:
-                    return none;
-                case 1:
-                    return left;
-                case 2:
-                    return right;
-                case 3:
-                default:
-                    return both;
-            }
-        }
-    }
-
-    public enum InputDirection {
-        left,
-        right
-    }
-
-    private final Supplier<MidiDevice> leftInputMidiDevice;
-    private final Supplier<MidiDevice> leftOutputMidiDevice;
-    private final Supplier<MidiDevice> rightInputMidiDevice;
-    private final Supplier<MidiDevice> rightOutputMidiDevice;
-    private final Supplier<MidiDevice> duplexOutputMidiDevice;
-    private final Supplier<MidiDevice> nullOutputMidiDevice = NullMidiPort::new;
+//    public enum OutputDirection {
+//        none(0),
+//        left(1),
+//        right(2),
+//        both(3),
+//        def(4);
+//
+//        final int mask;
+//
+//        OutputDirection(int mask) {
+//            this.mask = mask;
+//        }
+//
+//        public static OutputDirection forMask(int newMask) {
+//            switch (newMask) {
+//                case 0:
+//                    return none;
+//                case 1:
+//                    return left;
+//                case 2:
+//                    return right;
+//                case 3:
+//                default:
+//                    return both;
+//            }
+//        }
+//    }
+//
+//    public enum InputDirection {
+//        left,
+//        right
+//    }
 
     private Sequencer sequencer;
+
+    private final MidiDeviceManager midiDeviceManager;
 
     private MidiDevice recordingInputMidiDevice;
     private MidiDevice playingOutputMidiDevice;
 
-    private InputDirection defaultInputDirection = InputDirection.left;
-    private OutputDirection defaultOutputDirection = OutputDirection.right;
+//    private InputDirection defaultInputDirection = InputDirection.left;
+//    private OutputDirection defaultOutputDirection = OutputDirection.right;
 
-    public AppModel(Supplier<MidiDevice> leftInputMidiDevice, Supplier<MidiDevice> leftOutputMidiDevice, Supplier<MidiDevice> rightInputMidiDevice, Supplier<MidiDevice> rightOutputMidiDevice) {
+    public AppModel(MidiDeviceManager midiDeviceManager) {
+        this.midiDeviceManager = midiDeviceManager;
         try {
-            this.leftInputMidiDevice = leftInputMidiDevice;
-            this.leftOutputMidiDevice = leftOutputMidiDevice;
-            this.rightInputMidiDevice = rightInputMidiDevice;
-            this.rightOutputMidiDevice = rightOutputMidiDevice;
-            this.duplexOutputMidiDevice = () -> new DuplexMidiPort(leftOutputMidiDevice.get(), rightOutputMidiDevice.get());
-
             this.sequencer = MidiSystem.getSequencer(false);
         } catch (MidiUnavailableException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void setDefaultOutput(OutputDirection direction) {
-        if (direction == OutputDirection.def) {
-            throw new RuntimeException("Invalid default output direction");
-        }
-        this.defaultOutputDirection = direction;
-    }
-
-    public void addDefaultOutput(OutputDirection direction) {
-        if (direction == OutputDirection.def) {
-            throw new RuntimeException("Invalid default output direction");
-        }
-        int newMask = defaultOutputDirection.mask | direction.mask;
-        defaultOutputDirection = OutputDirection.forMask(newMask);
-    }
-
-    public void removeDefaultOutput(OutputDirection direction) {
-        if (direction == OutputDirection.def) {
-            throw new RuntimeException("Invalid default output direction");
-        }
-        int newMask = defaultOutputDirection.mask & ~direction.mask;
-        defaultOutputDirection = OutputDirection.forMask(newMask);
-    }
-
-    public void setDefaultInput(InputDirection direction) {
-        this.defaultInputDirection = direction;
-    }
-
-    public OutputDirection getDefaultOutputDirection() {
-        return defaultOutputDirection;
-    }
-
-    public InputDirection getDefaultInputDirection() {
-        return defaultInputDirection;
-    }
+//    public void setDefaultOutput(OutputDirection direction) {
+//        if (direction == OutputDirection.def) {
+//            throw new RuntimeException("Invalid default output direction");
+//        }
+//        this.defaultOutputDirection = direction;
+//    }
+//
+//    public void addDefaultOutput(OutputDirection direction) {
+//        if (direction == OutputDirection.def) {
+//            throw new RuntimeException("Invalid default output direction");
+//        }
+//        int newMask = defaultOutputDirection.mask | direction.mask;
+//        defaultOutputDirection = OutputDirection.forMask(newMask);
+//    }
+//
+//    public void removeDefaultOutput(OutputDirection direction) {
+//        if (direction == OutputDirection.def) {
+//            throw new RuntimeException("Invalid default output direction");
+//        }
+//        int newMask = defaultOutputDirection.mask & ~direction.mask;
+//        defaultOutputDirection = OutputDirection.forMask(newMask);
+//    }
+//
+//    public void setDefaultInput(InputDirection direction) {
+//        this.defaultInputDirection = direction;
+//    }
+//
+//    public OutputDirection getDefaultOutputDirection() {
+//        return defaultOutputDirection;
+//    }
+//
+//    public InputDirection getDefaultInputDirection() {
+//        return defaultInputDirection;
+//    }
 
     public void close() {
     }
@@ -136,7 +125,7 @@ public class AppModel {
                 // Load a MIDI file
                 return MidiSystem.getSequence(file);
             }
-        } catch(InvalidMidiDataException | IOException e){
+        } catch (InvalidMidiDataException | IOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -150,35 +139,25 @@ public class AppModel {
         }
     }
 
-    public MidiDevice getInputDevice(InputDirection inputDirection) {
-        switch (inputDirection) {
-            case left:
-                return leftInputMidiDevice.get();
-            case right:
-                return rightInputMidiDevice.get();
-        }
-        throw new RuntimeException("Should not be here");
+    public MidiDevice getInputDevice() {
+        return midiDeviceManager.getInputDevice();
     }
 
-    public MidiDevice getOutputDevice(OutputDirection outputDirection) {
-        switch (outputDirection) {
-            case def:
-                return getOutputDevice(getDefaultOutputDirection());
-            case left:
-                return leftOutputMidiDevice.get();
-            case right:
-                return rightOutputMidiDevice.get();
-            case both:
-                return duplexOutputMidiDevice.get();
-            case none:
-                return nullOutputMidiDevice.get();
-        }
-        throw new RuntimeException("Should not be here");
+    public MidiDevice getOutputDevice() {
+        return midiDeviceManager.getOutputDevice();
     }
 
-    public void sendMidiMessage(MidiMessage message, OutputDirection direction) {
-        try (MidiDevice outputDevice = getOutputDevice(direction);
-             Receiver receiver = outputDevice.getReceiver()) {
+    public MidiDevice getOutputDevice(int outputVariant) {
+        return midiDeviceManager.getOutputDevice(outputVariant);
+    }
+
+    public MidiDevice getOutputDevice(SynthFactory synthFactory, int outputVariant) {
+        return midiDeviceManager.getOutputDevice(synthFactory, outputVariant);
+    }
+
+    public void sendMidiMessage(MidiMessage message, MidiDevice outputDevice) {
+        try {
+            Receiver receiver = outputDevice.getReceiver();
             outputDevice.open();
             receiver.send(message, -1);
         } catch (MidiUnavailableException e) {
@@ -186,13 +165,13 @@ public class AppModel {
         }
     }
 
-    public void recordSequence(Sequence sequence, Receiver listener, InputDirection inputDirection) {
+    public void recordSequence(Sequence sequence, Receiver listener, MidiDevice inputDevice) {
         try {
             sequencer.open();
             sequencer.setSequence(sequence);
             sequencer.setMasterSyncMode(Sequencer.SyncMode.MIDI_SYNC);
             sequencer.recordEnable(sequence.getTracks()[0], -1);
-            recordingInputMidiDevice = getInputDevice(inputDirection);
+            recordingInputMidiDevice = inputDevice;
             recordingInputMidiDevice.open();
             long tickOffset = MidiUtils.tick2microsecond(sequence, sequence.getTickLength(), null);
             recordingTransmitter = recordingInputMidiDevice.getTransmitter();
@@ -251,12 +230,12 @@ public class AppModel {
         }
     }
 
-    public void playSequence(Sequence sequence, Receiver listener, OutputDirection outputDirection) {
+    public void playSequence(Sequence sequence, Receiver listener, MidiDevice outputDevice) {
         try {
             sequencer = MidiSystem.getSequencer(false);
             sequencer.open();
             sequencer.setTickPosition(0);
-            playingOutputMidiDevice = getOutputDevice(outputDirection);
+            playingOutputMidiDevice = outputDevice;
             playingOutputMidiDevice.open();
             sequencer.setSequence(sequence);
             playingTransmitter = sequencer.getTransmitter();

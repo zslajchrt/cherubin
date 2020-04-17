@@ -1,5 +1,8 @@
 package org.iquality.cherubin;
 
+import org.iquality.cherubin.bassStation2.BS2Factory;
+import org.iquality.cherubin.blofeld.BlofeldFactory;
+
 import javax.sound.midi.*;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -9,9 +12,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.ArrayList;
@@ -192,16 +192,37 @@ public class AppFrame extends JFrame {
     public static void main(String[] args) throws Exception {
 
         //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("Avid 003 Rack Port 1", true);
-        Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("VirtualMIDICable1", true);
+        //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("VirtualMIDICable1", true);
         //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("Bass Station", true);
-        Supplier<MidiDevice> leftOut = () -> MidiPortCommunicator.findDevice("VirtualMIDICable2", false);
-        Supplier<MidiDevice> rightIn = () -> MidiPortCommunicator.findDevice("Bass Station", true);
+        //Supplier<MidiDevice> leftOut = () -> MidiPortCommunicator.findDevice("VirtualMIDICable2", false);
         //Supplier<MidiDevice> rightIn = () -> MidiPortCommunicator.findDevice("Blofeld", true);
         //Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Blofeld", false);
         //Supplier<MidiDevice> rightIn = NullMidiPort::new;
         //Supplier<MidiDevice> rightOut = NullMidiPort::new;
-        Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Bass Station", false);
-        AppModel appModel = new AppModel(leftIn, leftOut, rightIn, rightOut);
+        //Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Bass Station", false);
+
+        MidiDevice systemOut = MidiPortCommunicator.findDevice("VirtualMIDICable2", false);
+        Function<Integer, MidiDevice> systemMidiOutputProvider = (outputVariant) -> systemOut;
+
+        MidiDevice systemIn = MidiPortCommunicator.findDevice("VirtualMIDICable1", false);
+        Supplier<MidiDevice> systemMidiInputProvider = () -> systemIn;
+
+        MidiDevice blofeldOut = MidiPortCommunicator.findDevice("Blofeld", false);
+        MidiDevice bassStationOut = MidiPortCommunicator.findDevice("Bass Station", false);
+
+        MidiDeviceManager.DuplexDeviceProvider blofeldProvider = new MidiDeviceManager.DuplexDeviceProvider(() -> blofeldOut, () -> systemOut);
+
+        Function<SynthFactory, Function<Integer, MidiDevice>> synthMidiOutputProvider = (synthFactory) -> {
+            if (synthFactory == BlofeldFactory.INSTANCE) {
+                return blofeldProvider;
+            } else if (synthFactory == BS2Factory.INSTANCE) {
+                return (outputVariant) -> bassStationOut;
+            } else {
+                return (outputVariant) -> NullMidiPort.INSTANCE;
+            }
+        };
+
+        AppModel appModel = new AppModel(new MidiDeviceManager(systemMidiInputProvider, systemMidiOutputProvider, synthMidiOutputProvider));
 
 //        MidiProxy midiProxy = new MidiProxy(appModel, new MidiProxy.MidiProxyListener() {
 //            @Override

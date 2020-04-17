@@ -67,8 +67,8 @@ public class SynthModel extends SoundEditorModel {
 
     private final List<SynthModelListener> listeners = new ArrayList<>();
 
-    public void uploadSynth() {
-        synth.getBanks().forEach(bank -> bank.stream().filter(Sound::nonEmpty).forEach(this::sendSoundWithDelayIgnoreEmpty));
+    public void uploadSynth(int outputVariant) {
+        synth.getBanks().forEach(bank -> bank.stream().filter(Sound::nonEmpty).forEach(s -> sendSoundWithDelayIgnoreEmpty(s, outputVariant)));
     }
 
     public boolean exists(String name) {

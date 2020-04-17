@@ -7,6 +7,8 @@ import java.util.List;
 
 public final class NullMidiPort implements MidiDevice {
 
+    public static final NullMidiPort INSTANCE = new NullMidiPort();
+
     final List<Receiver> receivers = Collections.synchronizedList(new ArrayList<>());
     final List<Transmitter> transmitters = Collections.synchronizedList(new ArrayList<>());
 

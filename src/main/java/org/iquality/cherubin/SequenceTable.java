@@ -43,17 +43,13 @@ public class SequenceTable extends JTable {
             }
 
             @Override
-            protected void sendSound(MidiMessage message, AppModel.OutputDirection direction) {
-                sequenceTableModel.sendMidiMessage(message, direction);
+            protected void sendSoundOn(MidiMessage message, int outputVariant) {
+                sequenceTableModel.sendMidiMessage(message, outputVariant);
             }
 
             @Override
-            protected void sendSoundOn(MidiMessage message) {
-                sequenceTableModel.sendMidiMessage(message, AppModel.OutputDirection.def);
-            }
-
-            @Override
-            protected void sendSoundOff() {
+            protected void sendSoundOff(MidiMessage message, int outputVariant) {
+                // TODO?
             }
         });
 

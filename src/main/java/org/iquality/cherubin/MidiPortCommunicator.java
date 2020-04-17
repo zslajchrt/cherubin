@@ -43,7 +43,8 @@ public class MidiPortCommunicator {
                     }
                 }
             }
-            throw new RuntimeException((midiIn ? "Input " : "Output") + " device " + deviceName + " not found");
+            //throw new RuntimeException((midiIn ? "Input " : "Output") + " device " + deviceName + " not found");
+            return NullMidiPort.INSTANCE;
         } catch (MidiUnavailableException e) {
             throw new RuntimeException(e);
         }

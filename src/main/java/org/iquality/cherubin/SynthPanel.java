@@ -233,7 +233,7 @@ public class SynthPanel extends JPanel implements AppExtension {
                     return;
             }
 
-            synthModel.uploadSynth();
+            synthModel.uploadSynth(SynthModel.getOutputVariant(actionEvent.getModifiers()));
         }));
     }
 

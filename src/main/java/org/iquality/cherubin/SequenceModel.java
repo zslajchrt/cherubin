@@ -1,5 +1,6 @@
 package org.iquality.cherubin;
 
+import javax.sound.midi.MidiDevice;
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.Receiver;
 import javax.sound.midi.Sequence;
@@ -33,7 +34,7 @@ public class SequenceModel {
     }
 
     public void recordSequence(Receiver listener) {
-        appModel.recordSequence(sequence, listener, appModel.getDefaultInputDirection());
+        appModel.recordSequence(sequence, listener, appModel.getInputDevice());
     }
 
     public void stopRecordingSequence() {
@@ -41,14 +42,14 @@ public class SequenceModel {
     }
 
     public void playSequence(Receiver listener) {
-        appModel.playSequence(sequence, listener, appModel.getDefaultOutputDirection());
+        appModel.playSequence(sequence, listener, appModel.getOutputDevice());
     }
 
     public void stopPlayingSequence() {
         appModel.stopPlayingSequence();
     }
 
-    public void sendMidiMessage(MidiMessage message, AppModel.OutputDirection direction) {
-        appModel.sendMidiMessage(message, direction);
+    public void sendMidiMessage(MidiMessage message, int outputVariant) {
+        appModel.sendMidiMessage(message, appModel.getOutputDevice(outputVariant));
     }
 }

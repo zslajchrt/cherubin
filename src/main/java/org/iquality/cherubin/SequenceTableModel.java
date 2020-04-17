@@ -80,7 +80,7 @@ public class SequenceTableModel extends AbstractTableModel {
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
     }
 
-    public void sendMidiMessage(MidiMessage message, AppModel.OutputDirection direction) {
-        sequenceModel.sendMidiMessage(message, direction);
+    public void sendMidiMessage(MidiMessage message, int outputVariant) {
+        sequenceModel.sendMidiMessage(message, outputVariant);
     }
 }

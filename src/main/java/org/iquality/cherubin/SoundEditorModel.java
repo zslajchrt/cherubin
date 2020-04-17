@@ -6,6 +6,7 @@ import javax.sound.midi.SysexMessage;
 import javax.sound.midi.Transmitter;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +35,7 @@ public class SoundEditorModel {
 
     public SoundEditorModel(AppModel appModel) {
         this.appModel = appModel;
-        this.soundSender = new SoundSender(appModel);
+        this.soundSender = new SoundSender();
     }
 
     public void addSoundEditorModelListener(SoundEditorModelListener listener) {
@@ -71,7 +72,7 @@ public class SoundEditorModel {
             return;
         }
         try {
-            dumpInputDevice = appModel.getInputDevice(appModel.getDefaultInputDirection());
+            dumpInputDevice = appModel.getInputDevice();
             dumpInputDevice.open();
             dumpTransmitter = dumpInputDevice.getTransmitter();
             dumpReceiver = new SoundDumpReceiver() {
@@ -108,22 +109,25 @@ public class SoundEditorModel {
         }
     }
 
-    public void sendSoundOn(Sound sound) {
-        soundSender.probeNoteOff();
-        soundSender.sendSound(sound, true, true);
-        soundSender.probeNoteOn();
+    public void sendSoundOn(Sound sound, int outputVariant) {
+        MidiDevice outputDevice = appModel.getOutputDevice(sound.getSynthFactory(), outputVariant);
+        soundSender.probeNoteOff(outputDevice);
+        SysexMessage sysEx = sound.cloneForEditBuffer().getSysEx();
+        soundSender.sendSound(outputDevice, sysEx);
+        soundSender.probeNoteOn(outputDevice);
     }
 
-    public void sendSoundOff() {
-        soundSender.probeNoteOff();
+    public void sendSoundOff(Sound sound, int outputVariant) {
+        MidiDevice outputDevice = appModel.getOutputDevice(sound.getSynthFactory(), outputVariant);
+        soundSender.probeNoteOff(outputDevice);
     }
 
-    public void sendSound(Sound sound, AppModel.OutputDirection outputDirection) {
-        soundSender.sendSound(sound, true, outputDirection, true);
-    }
-
-    public void sendSoundWithDelayIgnoreEmpty(Sound sound) {
-        soundSender.sendSoundWithDelay(sound, false);
+    public void sendSoundWithDelayIgnoreEmpty(Sound sound, int outputVariant) {
+        if (sound.isEmpty()) {
+            return;
+        }
+        MidiDevice outputDevice = appModel.getOutputDevice(sound.getSynthFactory(), outputVariant);
+        soundSender.sendSoundWithDelay(outputDevice, sound.getSysEx());
     }
 
     public Component makeSoundDumpCheckBox(Supplier<Boolean> activeFlag) {
@@ -151,20 +155,14 @@ public class SoundEditorModel {
             }
 
             @Override
-            protected void sendSound(T sound, AppModel.OutputDirection direction) {
-                SoundEditorModel.this.sendSound(sound, direction);
+            protected void sendSoundOn(T sound, int outputVariant) {
+                SoundEditorModel.this.sendSoundOn(sound, outputVariant);
                 SoundEditorModel.this.setEditedSound(sound);
             }
 
             @Override
-            protected void sendSoundOn(T sound) {
-                SoundEditorModel.this.sendSoundOn(sound);
-                SoundEditorModel.this.setEditedSound(sound);
-            }
-
-            @Override
-            protected void sendSoundOff() {
-                SoundEditorModel.this.sendSoundOff();
+            protected void sendSoundOff(T sound, int outputVariant) {
+                SoundEditorModel.this.sendSoundOff(sound, outputVariant);
             }
         });
 
@@ -173,12 +171,12 @@ public class SoundEditorModel {
         table.getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(enter, SEND_SOUND);
         table.getActionMap().put(SEND_SOUND, new SendSoundAction(table, soundColumn) {
             @Override
-            protected void onSound(Sound sound, boolean on) {
+            protected void onSound(Sound sound, int outputVariant, boolean on) {
                 if (on) {
-                    SoundEditorModel.this.sendSoundOn(sound);
+                    SoundEditorModel.this.sendSoundOn(sound, outputVariant);
                     SoundEditorModel.this.setEditedSound(sound);
                 } else {
-                    SoundEditorModel.this.sendSoundOff();
+                    SoundEditorModel.this.sendSoundOff(sound, outputVariant);
                 }
             }
         });
@@ -189,6 +187,19 @@ public class SoundEditorModel {
             JComboBox<SoundCategory> categoryComboBox = new JComboBox<>(SoundCategory.CATEGORIES);
             table.getColumnModel().getColumn(SoundDbTableModel.COLUMN_CATEGORY).setCellEditor(new DefaultCellEditor(categoryComboBox));
         }
+    }
+
+    public static int getOutputVariant(int keyModifiers) {
+        if ((keyModifiers & (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) == (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) {
+            return 3;
+        } else if ((keyModifiers & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK) {
+            return 1;
+        } else if ((keyModifiers & InputEvent.ALT_DOWN_MASK) == InputEvent.ALT_DOWN_MASK) {
+            return 2;
+        } else {
+            return 0;
+        }
+
     }
 
 }
