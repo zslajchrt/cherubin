@@ -2,8 +2,9 @@ package org.iquality.cherubin;
 
 import org.iquality.cherubin.bassStation2.BS2Factory;
 import org.iquality.cherubin.blofeld.BlofeldFactory;
+import org.iquality.cherubin.peak.PeakFactory;
 
-import javax.sound.midi.*;
+import javax.sound.midi.MidiDevice;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
@@ -18,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class AppFrame extends JFrame {
     static {
@@ -201,28 +201,49 @@ public class AppFrame extends JFrame {
         //Supplier<MidiDevice> rightOut = NullMidiPort::new;
         //Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Bass Station", false);
 
+        MidiDevice systemIn = MidiPortCommunicator.findDevice("Avid 003 Rack Port 1", true);
         MidiDevice systemOut = MidiPortCommunicator.findDevice("VirtualMIDICable2", false);
-        Function<Integer, MidiDevice> systemMidiOutputProvider = (outputVariant) -> systemOut;
+        //MidiDevice systemOut = MidiPortCommunicator.findDevice("Peak", false);
 
-        MidiDevice systemIn = MidiPortCommunicator.findDevice("VirtualMIDICable1", false);
-        Supplier<MidiDevice> systemMidiInputProvider = () -> systemIn;
-
+        MidiDevice blofeldIn = MidiPortCommunicator.findDevice("Blofeld", true);
         MidiDevice blofeldOut = MidiPortCommunicator.findDevice("Blofeld", false);
+
+        MidiDevice bassStationIn = MidiPortCommunicator.findDevice("Bass Station", true);
         MidiDevice bassStationOut = MidiPortCommunicator.findDevice("Bass Station", false);
 
-        MidiDeviceManager.DuplexDeviceProvider blofeldProvider = new MidiDeviceManager.DuplexDeviceProvider(() -> blofeldOut, () -> systemOut);
+        MidiDevice peakIn = MidiPortCommunicator.findDevice("Peak", true);
+        MidiDevice peakOut = MidiPortCommunicator.findDevice("Peak", false);
+
+        Function<Integer, MidiDevice> systemMidiInputProvider = (inputVariant) -> systemIn;
+        Function<Integer, MidiDevice> systemMidiOutputProvider = (outputVariant) -> systemOut;
+
+        MidiDeviceManager.DuplexDeviceProvider blofeldProviderOut = new MidiDeviceManager.DuplexDeviceProvider(() -> blofeldOut, () -> systemOut);
+
+        Function<SynthFactory, Function<Integer, MidiDevice>> synthMidiInputProvider = (synthFactory) -> {
+            if (synthFactory == BlofeldFactory.INSTANCE) {
+                return (inputVariant) -> blofeldIn;
+            } else if (synthFactory == BS2Factory.INSTANCE) {
+                return (inputVariant) -> bassStationIn;
+            } else if (synthFactory == PeakFactory.INSTANCE) {
+                return (inputVariant) -> peakIn;
+            } else {
+                return (inputVariant) -> NullMidiPort.INSTANCE;
+            }
+        };
 
         Function<SynthFactory, Function<Integer, MidiDevice>> synthMidiOutputProvider = (synthFactory) -> {
             if (synthFactory == BlofeldFactory.INSTANCE) {
-                return blofeldProvider;
+                return blofeldProviderOut;
             } else if (synthFactory == BS2Factory.INSTANCE) {
                 return (outputVariant) -> bassStationOut;
+            } else if (synthFactory == PeakFactory.INSTANCE) {
+                return (outputVariant) -> peakOut;
             } else {
                 return (outputVariant) -> NullMidiPort.INSTANCE;
             }
         };
 
-        AppModel appModel = new AppModel(new MidiDeviceManager(systemMidiInputProvider, systemMidiOutputProvider, synthMidiOutputProvider));
+        AppModel appModel = new AppModel(new MidiDeviceManager(systemMidiInputProvider, systemMidiOutputProvider, synthMidiInputProvider, synthMidiOutputProvider));
 
 //        MidiProxy midiProxy = new MidiProxy(appModel, new MidiProxy.MidiProxyListener() {
 //            @Override
@@ -258,7 +279,7 @@ public class AppFrame extends JFrame {
         Connection con = DriverManager.getConnection("jdbc:h2:/Users/zslajchrt/Music/Waldorf/Blofeld/Cherubin/allsounds;IFEXISTS=TRUE", "zbynek", "Ovation1");
         SoundDbModel soundDbModel = new SoundDbModel(appModel, con);
         SynthModel synthModel = new SynthModel(soundDbModel);
-        AppFrame main = new AppFrame(appModel, soundDbModel, synthModel, 800, 600);
+        AppFrame main = new AppFrame(appModel, soundDbModel, synthModel, 1200, 800);
         main.setVisible(true);
     }
 }

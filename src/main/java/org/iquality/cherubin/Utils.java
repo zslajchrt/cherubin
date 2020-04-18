@@ -1,10 +1,35 @@
 package org.iquality.cherubin;
 
-import javax.sound.midi.SysexMessage;
+import org.iquality.cherubin.blofeld.InitSysexMessage;
+
+import javax.sound.midi.InvalidMidiDataException;
+import javax.sound.midi.MidiMessage;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class Utils {
 
-    public static void printSysExDump(SysexMessage message) {
+    public static InitSysexMessage loadInitSysEx(String initSysExFileName, int length) {
+        try (InputStream initFileStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(initSysExFileName)) {
+            if (initFileStream == null) {
+                throw new RuntimeException("Cannot load " + initSysExFileName + " from resources");
+            }
+            byte[] message = new byte[length];
+            int read = initFileStream.read(message);
+            if (read != length) {
+                throw new RuntimeException("Invalid sysex size " + initSysExFileName + " (" + read + "!=" + length + ")");
+            }
+            return new InitSysexMessage(message, message.length);
+        } catch (IOException | InvalidMidiDataException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static <T extends MidiMessage> T printSysExDump(T message) {
+        if (true) {
+            return message;
+        }
+
         byte[] msg = message.getMessage();
 
         for (int i = 0; i < msg.length; i++) {
@@ -19,6 +44,8 @@ public class Utils {
         }
 
         System.out.println();
+
+        return message;
     }
 
 

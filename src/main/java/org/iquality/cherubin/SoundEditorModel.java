@@ -5,7 +5,6 @@ import javax.sound.midi.MidiUnavailableException;
 import javax.sound.midi.SysexMessage;
 import javax.sound.midi.Transmitter;
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
@@ -16,16 +15,21 @@ public class SoundEditorModel {
 
     private static final Object SEND_SOUND = "sendSound";
 
+    public static final int SOUND_DUMP_DELAY = 500;
+
     private final SoundSender soundSender;
 
     private MidiDevice dumpInputDevice;
     private Transmitter dumpTransmitter;
     private SoundDumpReceiver dumpReceiver;
+    private boolean audition = true;
 
     public interface SoundEditorModelListener {
         void editedSoundSelected(Sound sound);
 
         void editedSoundUpdated(Sound sound);
+
+        void editedSoundCleared(Sound sound);
     }
 
     protected final AppModel appModel;
@@ -58,6 +62,12 @@ public class SoundEditorModel {
         }
     }
 
+    private void fireEditedSoundCleared(Sound sound) {
+        for (SoundEditorModelListener soundEditorModelListener : soundEditorModelListeners) {
+            soundEditorModelListener.editedSoundCleared(sound);
+        }
+    }
+
     public Sound getEditedSound() {
         return editedSound;
     }
@@ -67,12 +77,18 @@ public class SoundEditorModel {
         fireEditedSoundSelected(sound);
     }
 
+    public void clearEditedSound() {
+        Sound cleared = this.editedSound;
+        this.editedSound = null;
+        fireEditedSoundCleared(cleared);
+    }
+
     public void startListeningToDump(Supplier<Boolean> activeFlag) {
         if (editedSound == null) {
             return;
         }
         try {
-            dumpInputDevice = appModel.getInputDevice();
+            dumpInputDevice = appModel.getInputDevice(editedSound.getSynthFactory(), 0);
             dumpInputDevice.open();
             dumpTransmitter = dumpInputDevice.getTransmitter();
             dumpReceiver = new SoundDumpReceiver() {
@@ -109,12 +125,21 @@ public class SoundEditorModel {
         }
     }
 
+    public boolean isListeningToDump() {
+        return dumpTransmitter != null;
+    }
+
     public void sendSoundOn(Sound sound, int outputVariant) {
         MidiDevice outputDevice = appModel.getOutputDevice(sound.getSynthFactory(), outputVariant);
         soundSender.probeNoteOff(outputDevice);
-        SysexMessage sysEx = sound.cloneForEditBuffer().getSysEx();
-        soundSender.sendSound(outputDevice, sysEx);
-        soundSender.probeNoteOn(outputDevice);
+        if (!sound.isInit()) {
+            // Do not update the synth's edit buffer with the initial (empty) sound
+            SysexMessage sysEx = sound.cloneForEditBuffer().getSysEx();
+            soundSender.sendSound(outputDevice, sysEx);
+        }
+        if (audition) {
+            soundSender.probeNoteOn(outputDevice);
+        }
     }
 
     public void sendSoundOff(Sound sound, int outputVariant) {
@@ -123,14 +148,15 @@ public class SoundEditorModel {
     }
 
     public void sendSoundWithDelayIgnoreEmpty(Sound sound, int outputVariant) {
-        if (sound.isEmpty()) {
+        if (sound.isInit()) {
             return;
         }
         MidiDevice outputDevice = appModel.getOutputDevice(sound.getSynthFactory(), outputVariant);
-        soundSender.sendSoundWithDelay(outputDevice, sound.getSysEx());
+        soundSender.sendSound(outputDevice, sound.getSysEx());
+        delay();
     }
 
-    public Component makeSoundDumpCheckBox(Supplier<Boolean> activeFlag) {
+    public JCheckBox makeSoundDumpCheckBox(Supplier<Boolean> activeFlag) {
         JCheckBox ch = new JCheckBox("Listen to dump");
         ch.addActionListener(e -> {
             if (ch.isSelected()) {
@@ -147,6 +173,23 @@ public class SoundEditorModel {
         return ch;
     }
 
+    public JCheckBox makeAuditionCheckBox() {
+        JCheckBox ch = new JCheckBox("Audition");
+        ch.setSelected(isAudition());
+        ch.addActionListener(e -> {
+            setAudition(ch.isSelected());
+        });
+        return ch;
+    }
+
+    public void setAudition(boolean flag) {
+        audition = flag;
+    }
+
+    public boolean isAudition() {
+        return audition;
+    }
+
     <T extends Sound> void installTableBehavior(JTable table, int soundColumn, int categoriesColumn) {
         table.addMouseListener(new SoundSendingMouseAdapter<T>() {
             @Override
@@ -156,8 +199,12 @@ public class SoundEditorModel {
 
             @Override
             protected void sendSoundOn(T sound, int outputVariant) {
-                SoundEditorModel.this.sendSoundOn(sound, outputVariant);
                 SoundEditorModel.this.setEditedSound(sound);
+
+                appModel.getExecutor().execute(() -> {
+                    SoundEditorModel.this.sendSoundOn(sound, outputVariant);
+                    SoundEditorModel.this.delay();
+                });
             }
 
             @Override
@@ -184,8 +231,15 @@ public class SoundEditorModel {
         table.setColumnSelectionAllowed(true);
 
         if (categoriesColumn >= 0) {
-            JComboBox<SoundCategory> categoryComboBox = new JComboBox<>(SoundCategory.CATEGORIES);
+            JComboBox<SoundCategory> categoryComboBox = new JComboBox<>(SoundCategory.values());
             table.getColumnModel().getColumn(SoundDbTableModel.COLUMN_CATEGORY).setCellEditor(new DefaultCellEditor(categoryComboBox));
+        }
+    }
+
+    public void delay() {
+        try {
+            Thread.sleep(SOUND_DUMP_DELAY);
+        } catch (InterruptedException ignored) {
         }
     }
 

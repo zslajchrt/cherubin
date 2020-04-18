@@ -4,7 +4,6 @@ import org.iquality.cherubin.*;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;
-import javax.swing.event.ListSelectionListener;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,10 +13,11 @@ public class BS2Factory implements SynthFactory {
     public static final int BANK_SIZE = 128;
 
     public static final SynthFactory INSTANCE = new BS2Factory();
+    public static final String SYNTH_ID = "BassStation 2";
 
     @Override
     public String getSynthId() {
-        return "BassStation 2";
+        return SYNTH_ID;
     }
 
     @Override
@@ -34,7 +34,7 @@ public class BS2Factory implements SynthFactory {
         for (int i = 0; i < msgCount; i++) {
             byte[] singleMsg = new byte[BS2Sound.MESSAGE_LENGTH];
             System.arraycopy(bulkMsg, i * BS2Sound.MESSAGE_LENGTH, singleMsg, 0, BS2Sound.MESSAGE_LENGTH);
-            BS2Sound sound = null;
+            BS2Sound sound;
             try {
                 sound = new BS2Sound(-1, new SysexMessage(singleMsg, singleMsg.length), SoundCategory.Init, soundSetName);
             } catch (InvalidMidiDataException e) {
@@ -47,7 +47,7 @@ public class BS2Factory implements SynthFactory {
     }
 
     @Override
-    public BS2Sound createSingleSound(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
+    public BS2Sound createOneSound(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
         return new BS2Sound(id, sysexMessage, category, soundSetName);
     }
 

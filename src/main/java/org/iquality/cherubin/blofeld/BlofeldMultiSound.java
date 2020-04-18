@@ -1,10 +1,7 @@
 package org.iquality.cherubin.blofeld;
 
-import org.iquality.cherubin.AbstractSound;
-import org.iquality.cherubin.MultiSound;
-import org.iquality.cherubin.SoundCategory;
+import org.iquality.cherubin.*;
 
-import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,12 +10,12 @@ import java.util.List;
 public class BlofeldMultiSound extends AbstractSound implements MultiSound, BlofeldSoundCommon {
 
     private static final String INIT_FILE_NAME = "blofeld-init-multi.syx";
-    private static BlofeldSingleSound.BlofeldInitSysexMessage INIT_SYSEX;
+    private static InitSysexMessage INIT_SYSEX;
 
-    class BlofeldSlotRef implements SlotRef {
+    class BlofeldSoundSlotRef implements SoundSlotRef {
         private final int slotNum;
 
-        BlofeldSlotRef(int slotNum) {
+        BlofeldSoundSlotRef(int slotNum) {
             this.slotNum = slotNum;
         }
 
@@ -46,22 +43,22 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
     public static final int MULTI_SOUND_MSG_LENGTH = 425;
 
     static {
-        INIT_SYSEX = BlofeldSoundCommon.loadInitSysEx(INIT_FILE_NAME, MULTI_SOUND_MSG_LENGTH);
+        INIT_SYSEX = Utils.loadInitSysEx(INIT_FILE_NAME, MULTI_SOUND_MSG_LENGTH);
     }
 
-    private final List<BlofeldSlotRef> slotRefs = new ArrayList<>();
+    private final List<BlofeldSoundSlotRef> slotRefs = new ArrayList<>();
 
-    private SoundCategory category = SoundCategory.Init;
+    private SoundCategory category;
 
     public BlofeldMultiSound() {
-        super(-1, INIT_SYSEX, "", BlofeldFactory.INSTANCE);
+        this(-1, INIT_SYSEX, SoundCategory.Multi, "");
     }
 
     public BlofeldMultiSound(int id, SysexMessage sysEx, SoundCategory category, String soundSetName) {
         super(id, sysEx, soundSetName, BlofeldFactory.INSTANCE);
         this.category = category;
         for (int i = 0; i < 16; i++ ) {
-            slotRefs.add(new BlofeldSlotRef(i));
+            slotRefs.add(new BlofeldSoundSlotRef(i));
         }
     }
 
@@ -93,24 +90,18 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
     }
 
     @Override
-    public boolean isEmpty() {
-        return getSysEx() instanceof BlofeldSingleSound.BlofeldInitSysexMessage;
+    protected void patch(byte[] data, int programBank, int programNumber) {
+        data[BANK_OFFSET] = 0; // there is no bank for multi
+        data[PROGRAM_OFFSET] = (byte) programNumber;
     }
 
     @Override
-    public BlofeldMultiSound clone(int programBank, int programNumber) {
-        try {
-            byte[] data = getSysEx().getMessage(); // getMessage() returns a copy
-            data[BANK_OFFSET] = 0; // there is no bank for multi
-            data[PROGRAM_OFFSET] = (byte) programNumber;
-            return new BlofeldMultiSound(getId(), isEmpty() ? new BlofeldInitSysexMessage(data, data.length) : new SysexMessage(data, data.length), category, getSoundSetName());
-        } catch (InvalidMidiDataException e) {
-            throw new RuntimeException(e);
-        }
+    protected void patchForEditBuffer(byte[] data) {
+        patch(data, 0x7F, 0x00);
     }
 
     @Override
-    public List<SlotRef> getSlotRefs() {
+    public List<SoundSlotRef> getSlotRefs() {
         return Collections.unmodifiableList(slotRefs);
     }
 }

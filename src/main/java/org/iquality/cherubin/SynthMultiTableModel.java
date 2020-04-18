@@ -95,16 +95,15 @@ public class SynthMultiTableModel extends AbstractTableModel {
 
             String refStr = value.toString();
             boolean isValid = refStr.length() >= 2 && Character.isLetter(refStr.charAt(0));
-
-            if (refStr.length() >= 2 && Character.isLetter(refStr.charAt(0))) {
+            if (isValid) {
                 try {
                     int program = Integer.parseInt(refStr.substring(1)) - 1;
                     int bank = refStr.charAt(0) - 'A';
 
                     MultiSound sound = soundBank.get(rowIndex);
                     int slotIdx = columnIndex - 2;
-                    MultiSound.SlotRef slotRef = sound.getSlotRefs().get(slotIdx);
-                    slotRef.setRef(bank, program);
+                    SoundSlotRef soundSlotRef = sound.getSlotRefs().get(slotIdx);
+                    soundSlotRef.setRef(bank, program);
 
                     synthModel.updateMultiSound(sound);
                     return;

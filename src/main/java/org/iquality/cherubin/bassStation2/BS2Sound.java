@@ -1,9 +1,7 @@
 package org.iquality.cherubin.bassStation2;
 
 import org.iquality.cherubin.*;
-import org.iquality.cherubin.blofeld.BlofeldSoundCommon;
 
-import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;
 
 public class BS2Sound extends AbstractSound implements SingleSound {
@@ -17,14 +15,13 @@ public class BS2Sound extends AbstractSound implements SingleSound {
     private static SysexMessage INIT_SYSEX;
 
     static {
-        INIT_SYSEX = BlofeldSoundCommon.loadInitSysEx(INIT_FILE_NAME, MESSAGE_LENGTH);
+        INIT_SYSEX = Utils.loadInitSysEx(INIT_FILE_NAME, MESSAGE_LENGTH);
     }
 
     private SoundCategory category;
 
     public BS2Sound() {
-        super(-1, INIT_SYSEX, "", BS2Factory.INSTANCE);
-        category = SoundCategory.Init;
+        this(-1, INIT_SYSEX, SoundCategory.Init, "");
     }
 
     public BS2Sound(int id, SysexMessage sysEx, SoundCategory category, String soundSetName) {
@@ -60,25 +57,13 @@ public class BS2Sound extends AbstractSound implements SingleSound {
     }
 
     @Override
-    public boolean isEmpty() {
-        return false;
+    protected void patch(byte[] data, int programBank, int programNumber) {
+        data[PATCH_NUMBER_OFFSET - 1] = 0;
+        data[PATCH_NUMBER_OFFSET] = (byte) programNumber;
     }
 
     @Override
-    public Sound clone(int programBank, int programNumber) {
-        try {
-            byte[] data = getSysEx().getMessage(); // getMessage() returns a copy
-            data[PATCH_NUMBER_OFFSET - 1] = 0;
-            data[PATCH_NUMBER_OFFSET] = (byte) programNumber;
-            SysexMessage sysEx = new SysexMessage(data, data.length);
-            return new BS2Sound(getId(), sysEx, category, getSoundSetName());
-        } catch (InvalidMidiDataException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public Sound cloneForEditBuffer() {
-        return clone(0, 0);
+    protected void patchForEditBuffer(byte[] data) {
+        patch(data, 0, 0);
     }
 }

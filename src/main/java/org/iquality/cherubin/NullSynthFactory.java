@@ -8,6 +8,7 @@ import java.util.List;
 public class NullSynthFactory implements SynthFactory {
 
     public static final NullSynthFactory INSTANCE = new NullSynthFactory();
+    public static final String SYNTH_ID = "NullSynth";
 
     @Override
     public List<Sound> createSounds(SysexMessage sysexMessage, String soundSetName) {
@@ -15,7 +16,7 @@ public class NullSynthFactory implements SynthFactory {
     }
 
     @Override
-    public Sound createSingleSound(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
+    public Sound createOneSound(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
         throw new UnsupportedOperationException();
     }
 
@@ -51,7 +52,7 @@ public class NullSynthFactory implements SynthFactory {
 
     @Override
     public String getSynthId() {
-        return "NullSynth";
+        return SYNTH_ID;
     }
 
     @Override

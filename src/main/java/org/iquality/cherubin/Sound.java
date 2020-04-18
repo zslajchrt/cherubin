@@ -18,10 +18,10 @@ public interface Sound {
 
     String getSoundSetName();
 
-    boolean isEmpty();
+    boolean isInit();
 
-    default boolean nonEmpty() {
-        return !isEmpty();
+    default boolean isRegular() {
+        return !isInit();
     }
 
     int getBank();

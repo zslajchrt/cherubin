@@ -11,9 +11,15 @@ public enum SoundCategory {
     Lead,
     Mono,
     Pad,
-    Perc,
     Poly,
-    Seq;
-
-    public static SoundCategory[] CATEGORIES = values();
+    Seq,
+    Classic,
+    Motion,
+    SFX,
+    Strings,
+    Bell,
+    User1,
+    User2,
+    Multi,
+    All;
 }

@@ -118,7 +118,7 @@ public class SequencePanel extends JPanel implements AppExtension {
 
             final Color[] colors = new Color[2];
             colors[0] = Color.RED;
-            colors[1] = button.getForeground();
+            colors[1] = Color.BLACK;
 
             if ("recordSequence".equals(actionEvent.getActionCommand())) {
                 button.setActionCommand("stopRecording");
@@ -138,9 +138,9 @@ public class SequencePanel extends JPanel implements AppExtension {
             } else if ("stopRecording".equals(actionEvent.getActionCommand())) {
                 button.setActionCommand("recordSequence");
                 button.setText("Record");
+                button.setForeground(colors[1]);
                 sequenceModel.stopRecordingSequence();
                 rebuildTrackTabs();
-                button.setBackground(colors[1]);
             }
         }));
     }

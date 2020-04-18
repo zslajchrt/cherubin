@@ -6,6 +6,8 @@ import javax.sound.midi.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class AppModel {
 
@@ -14,39 +16,6 @@ public class AppModel {
     private ReceiverWrapper playingReceiver;
     private ReceiverWrapper recordingReceiver;
 
-//    public enum OutputDirection {
-//        none(0),
-//        left(1),
-//        right(2),
-//        both(3),
-//        def(4);
-//
-//        final int mask;
-//
-//        OutputDirection(int mask) {
-//            this.mask = mask;
-//        }
-//
-//        public static OutputDirection forMask(int newMask) {
-//            switch (newMask) {
-//                case 0:
-//                    return none;
-//                case 1:
-//                    return left;
-//                case 2:
-//                    return right;
-//                case 3:
-//                default:
-//                    return both;
-//            }
-//        }
-//    }
-//
-//    public enum InputDirection {
-//        left,
-//        right
-//    }
-
     private Sequencer sequencer;
 
     private final MidiDeviceManager midiDeviceManager;
@@ -54,8 +23,7 @@ public class AppModel {
     private MidiDevice recordingInputMidiDevice;
     private MidiDevice playingOutputMidiDevice;
 
-//    private InputDirection defaultInputDirection = InputDirection.left;
-//    private OutputDirection defaultOutputDirection = OutputDirection.right;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     public AppModel(MidiDeviceManager midiDeviceManager) {
         this.midiDeviceManager = midiDeviceManager;
@@ -66,42 +34,11 @@ public class AppModel {
         }
     }
 
-//    public void setDefaultOutput(OutputDirection direction) {
-//        if (direction == OutputDirection.def) {
-//            throw new RuntimeException("Invalid default output direction");
-//        }
-//        this.defaultOutputDirection = direction;
-//    }
-//
-//    public void addDefaultOutput(OutputDirection direction) {
-//        if (direction == OutputDirection.def) {
-//            throw new RuntimeException("Invalid default output direction");
-//        }
-//        int newMask = defaultOutputDirection.mask | direction.mask;
-//        defaultOutputDirection = OutputDirection.forMask(newMask);
-//    }
-//
-//    public void removeDefaultOutput(OutputDirection direction) {
-//        if (direction == OutputDirection.def) {
-//            throw new RuntimeException("Invalid default output direction");
-//        }
-//        int newMask = defaultOutputDirection.mask & ~direction.mask;
-//        defaultOutputDirection = OutputDirection.forMask(newMask);
-//    }
-//
-//    public void setDefaultInput(InputDirection direction) {
-//        this.defaultInputDirection = direction;
-//    }
-//
-//    public OutputDirection getDefaultOutputDirection() {
-//        return defaultOutputDirection;
-//    }
-//
-//    public InputDirection getDefaultInputDirection() {
-//        return defaultInputDirection;
-//    }
-
     public void close() {
+    }
+
+    public ExecutorService getExecutor() {
+        return executor;
     }
 
     public Sequence loadSequence(File file) {
@@ -143,6 +80,14 @@ public class AppModel {
         return midiDeviceManager.getInputDevice();
     }
 
+    public MidiDevice getInputDevice(int inputVariant) {
+        return midiDeviceManager.getInputDevice(inputVariant);
+    }
+
+    public MidiDevice getInputDevice(SynthFactory synthFactory, int inputVariant) {
+        return midiDeviceManager.getInputDevice(synthFactory, inputVariant);
+    }
+
     public MidiDevice getOutputDevice() {
         return midiDeviceManager.getOutputDevice();
     }
@@ -159,7 +104,7 @@ public class AppModel {
         try {
             Receiver receiver = outputDevice.getReceiver();
             outputDevice.open();
-            receiver.send(message, -1);
+            receiver.send(Utils.printSysExDump(message), -1);
         } catch (MidiUnavailableException e) {
             throw new RuntimeException(e);
         }
@@ -292,28 +237,6 @@ public class AppModel {
 
         @Override
         public void send(MidiMessage message, long timeStamp) {
-//            int status = message.getStatus();
-//            if (!recording && status != 0x90 && status != 0x80) {
-//                return;
-//            }
-//            if (message instanceof ShortMessage) {
-//                //(command & 0xF0) | (channel & 0x0F)
-//                if (status == 0x90) {
-//                    try {
-//                        if (((ShortMessage) message).getData2() == 0) {
-//                            message = new ShortMessage(0x80, ((ShortMessage) message).getData1(), 0);
-//                        } else {
-//                            message = new ShortMessage(0x90, ((ShortMessage) message).getData1(), ((ShortMessage) message).getData2());
-//                        }
-//                    } catch (InvalidMidiDataException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//                status = message.getStatus();
-//                if (status != 0xF8 && status != 0xFE) {
-//                    System.out.printf("%s %d: %02X %02X %02X\n", message.getClass().getSimpleName(), System.currentTimeMillis(), status, ((ShortMessage) message).getData1(), ((ShortMessage) message).getData2());
-//                }
-//            }
             if (timeStamp < 0) {
                 timeStamp = (System.nanoTime() - startTime) / 1000;
             }
@@ -333,4 +256,5 @@ public class AppModel {
             }
         }
     }
+
 }

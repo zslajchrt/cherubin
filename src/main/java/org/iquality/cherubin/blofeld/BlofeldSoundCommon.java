@@ -2,11 +2,6 @@ package org.iquality.cherubin.blofeld;
 
 import org.iquality.cherubin.Sound;
 
-import javax.sound.midi.InvalidMidiDataException;
-import javax.sound.midi.SysexMessage;
-import java.io.IOException;
-import java.io.InputStream;
-
 public interface BlofeldSoundCommon extends Sound {
 
     int MESSAGE_ID_OFFSET = 4;
@@ -24,35 +19,4 @@ public interface BlofeldSoundCommon extends Sound {
     byte SINGLE_DUMP = 0x10;
     byte MULTI_DUMP = 0x11;
 
-    class BlofeldInitSysexMessage extends SysexMessage {
-        BlofeldInitSysexMessage(byte[] data, int length) throws InvalidMidiDataException {
-            super(data, length);
-        }
-    }
-
-    static BlofeldInitSysexMessage loadInitSysEx(String initSysExFileName, int length) {
-        try (InputStream initFileStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(initSysExFileName)) {
-            if (initFileStream == null) {
-                throw new RuntimeException("Cannot load " + initSysExFileName + " from resources");
-            }
-            byte[] message = new byte[length];
-            int read = initFileStream.read(message);
-            if (read != length) {
-                throw new RuntimeException("Invalid sysex size " + initSysExFileName + " (" + read + "!=" + length + ")");
-            }
-            return new BlofeldInitSysexMessage(message, message.length);
-        } catch (IOException | InvalidMidiDataException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    default boolean isEmpty() {
-        return getSysEx() instanceof BlofeldInitSysexMessage;
-    }
-
-    @Override
-    default Sound cloneForEditBuffer() {
-        return clone((byte) 0x7F, (byte) 0x00);
-    }
 }

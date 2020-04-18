@@ -1,7 +1,10 @@
 package org.iquality.cherubin;
 
+import org.iquality.cherubin.blofeld.InitSysexMessage;
+
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;
+import java.util.function.Consumer;
 
 public abstract class AbstractSound implements Sound {
 
@@ -30,7 +33,7 @@ public abstract class AbstractSound implements Sound {
 
     @Override
     public final String getName() {
-        return isEmpty() ? "Empty" : getNameImp();
+        return isInit() ? "Empty" : getNameImp();
     }
 
     protected abstract String getNameImp();
@@ -38,7 +41,13 @@ public abstract class AbstractSound implements Sound {
     @Override
     public void setSysEx(SysexMessage sysEx) {
         assert sysEx != null;
-        this.sysEx = sysEx;
+        byte[] data = sysEx.getMessage();
+        patch(data, getBank(), getProgram());
+        try {
+            this.sysEx = new SysexMessage(data, data.length);
+        } catch (InvalidMidiDataException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void setSoundSetName(String soundSetName) {
@@ -56,27 +65,32 @@ public abstract class AbstractSound implements Sound {
     }
 
     @Override
+    public boolean isInit() {
+        return getSysEx() instanceof InitSysexMessage;
+    }
+
+    @Override
     public final SoundCategory getCategory() {
-        return isEmpty() ? SoundCategory.Init : getCategoryImp();
+        return isInit() ? SoundCategory.Init : getCategoryImp();
     }
 
     protected abstract SoundCategory getCategoryImp();
 
     @Override
     public final int getBank() {
-        return isEmpty() ? -1 : getBankImp();
+        return getBankImp();
     }
 
     protected abstract int getBankImp();
 
     @Override
     public final int getProgram() {
-        return isEmpty() ? -1 : getProgramImp();
+        return getProgramImp();
     }
 
     @Override
     public void setCategory(SoundCategory category) {
-        if (!isEmpty()) setCategoryImp(category);
+        if (!isInit()) setCategoryImp(category);
     }
 
     protected abstract void setCategoryImp(SoundCategory category);
@@ -94,7 +108,37 @@ public abstract class AbstractSound implements Sound {
     }
 
     @Override
+    public Sound clone(int programBank, int programNumber) {
+        return cloneHelper(data -> patch(data, programBank, programNumber));
+    }
+
+    @Override
+    public Sound cloneForEditBuffer() {
+        return cloneHelper(this::patchForEditBuffer);
+    }
+
+    private Sound cloneHelper(Consumer<byte[]> patcher) {
+        SysexMessage sysEx = getSysEx();
+        byte[] data = sysEx.getMessage(); // getMessage() returns a copy
+        patcher.accept(data);
+        try {
+            if (sysEx instanceof InitSysexMessage) {
+                sysEx = new InitSysexMessage(data, data.length);
+            } else {
+                sysEx = new SysexMessage(data, data.length);
+            }
+            return getSynthFactory().createOneSound(getId(), getName(), sysEx, getCategory(), getSoundSetName());
+        } catch (InvalidMidiDataException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected abstract void patch(byte[] data, int programBank, int programNumber);
+
+    protected abstract void patchForEditBuffer(byte[] data);
+
+    @Override
     public String toString() {
-        return getName();
+        return String.format("%s (%s%d)",  getName(), "" + (char)(getBank() + 'A'), (getProgram() + 1));
     }
 }

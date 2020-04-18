@@ -6,18 +6,28 @@ import java.util.function.Supplier;
 
 public class MidiDeviceManager {
 
-    private final Supplier<MidiDevice> systemInputDeviceProvider;
+    private final Function<Integer, MidiDevice> systemInputDeviceProvider;
     private final Function<Integer, MidiDevice> systemOutputDeviceProvider;
+    private final Function<SynthFactory, Function<Integer, MidiDevice>> synthInputDeviceProvider;
     private final Function<SynthFactory, Function<Integer, MidiDevice>> synthOutputDeviceProvider;
 
-    public MidiDeviceManager(Supplier<MidiDevice> systemInputDeviceProvider, Function<Integer, MidiDevice> systemOutputDeviceProvider, Function<SynthFactory, Function<Integer, MidiDevice>> synthOutputDeviceProvider) {
+    public MidiDeviceManager(Function<Integer, MidiDevice> systemInputDeviceProvider, Function<Integer, MidiDevice> systemOutputDeviceProvider, Function<SynthFactory, Function<Integer, MidiDevice>> synthInputDeviceProvider, Function<SynthFactory, Function<Integer, MidiDevice>> synthOutputDeviceProvider) {
         this.systemInputDeviceProvider = systemInputDeviceProvider;
         this.systemOutputDeviceProvider = systemOutputDeviceProvider;
+        this.synthInputDeviceProvider = synthInputDeviceProvider;
         this.synthOutputDeviceProvider = synthOutputDeviceProvider;
     }
 
     public MidiDevice getInputDevice() {
-        return systemInputDeviceProvider.get();
+        return systemInputDeviceProvider.apply(0);
+    }
+
+    public MidiDevice getInputDevice(int inputVariant) {
+        return systemInputDeviceProvider.apply(inputVariant);
+    }
+
+    public MidiDevice getInputDevice(SynthFactory synthFactory, int inputVariant) {
+        return synthInputDeviceProvider.apply(synthFactory).apply(inputVariant);
     }
 
     public MidiDevice getOutputDevice() {

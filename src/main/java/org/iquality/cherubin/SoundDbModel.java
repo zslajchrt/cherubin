@@ -107,14 +107,14 @@ public class SoundDbModel extends SoundEditorModel {
                 int id = resultSet.getInt(1);
                 String name = resultSet.getString(2);
                 int catOrd = resultSet.getInt(3);
-                SoundCategory category = SoundCategory.CATEGORIES[catOrd];
+                SoundCategory category = SoundCategory.values()[catOrd];
                 Blob sysExBlob = resultSet.getBlob(4);
                 byte[] sysExBytes = sysExBlob.getBytes(0, (int) sysExBlob.length());
                 String soundSetName = resultSet.getString(5);
                 String synthId = resultSet.getString(6);
 
                 SynthFactory synthFactory = getSoundFactory(synthId);
-                Sound sound = synthFactory.createSingleSound(id, name, new SysexMessage(sysExBytes, sysExBytes.length), category, soundSetName);
+                Sound sound = synthFactory.createOneSound(id, name, new SysexMessage(sysExBytes, sysExBytes.length), category, soundSetName);
                 SoundSet<Sound> soundSet = soundSetsMap.computeIfAbsent(soundSetName, SoundSet::new);
                 soundSet.sounds.add(sound);
                 sounds.add(sound);
@@ -148,7 +148,7 @@ public class SoundDbModel extends SoundEditorModel {
         for (int slot = 0; slot < bankSounds.size(); slot++) {
             Sound sound = bankSounds.get(slot);
             // "INSERT INTO BLOFELD_SINGLE (BANK, SLOT, NAME, CATEGORY, SOUNDSET, SYSEX, BLOFELD_ID)
-            if (!sound.isEmpty()) {
+            if (!sound.isInit()) {
                 insertSynthSoundStm.clearParameters();
                 insertSynthSoundStm.setInt(1, bank);
                 insertSynthSoundStm.setInt(2, slot);
@@ -214,12 +214,12 @@ public class SoundDbModel extends SoundEditorModel {
                 int slot = resultSet.getInt("SLOT");
                 String soundName = resultSet.getString("SOUND_NAME");
                 int catOrd = resultSet.getInt("CATEGORY");
-                SoundCategory category = SoundCategory.CATEGORIES[catOrd];
+                SoundCategory category = SoundCategory.values()[catOrd];
                 Blob sysExBlob = resultSet.getBlob("SYSEX");
                 byte[] sysExBytes = sysExBlob.getBytes(0, (int) sysExBlob.length());
                 String soundSetName = resultSet.getString("SOUNDSET");
 
-                Sound sound = synthFactory.createSingleSound(soundId, soundName, new SysexMessage(sysExBytes, sysExBytes.length), category, soundSetName);
+                Sound sound = synthFactory.createOneSound(soundId, soundName, new SysexMessage(sysExBytes, sysExBytes.length), category, soundSetName);
                 bank.set(slot, sound);
             }
 

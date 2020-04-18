@@ -26,6 +26,8 @@ public class SynthModel extends SoundEditorModel {
     public void loadSynth(SynthHeader synthHeader) {
         try {
             this.synth = soundDbModel.loadSynth(synthHeader);
+            stopListeningToDump();
+            clearEditedSound();
             assert synth.getBanks().size() == this.synth.getSynthFactory().getBankCount();
             fireSynthChanged();
         } catch (Exception e) {
@@ -35,6 +37,8 @@ public class SynthModel extends SoundEditorModel {
 
     public Synth newSynth(String name, SynthFactory synthFactory) {
         synth = soundDbModel.newSynth(synthFactory, name);
+        stopListeningToDump();
+        clearEditedSound();
         fireSynthChanged();
         return synth;
     }
@@ -68,7 +72,7 @@ public class SynthModel extends SoundEditorModel {
     private final List<SynthModelListener> listeners = new ArrayList<>();
 
     public void uploadSynth(int outputVariant) {
-        synth.getBanks().forEach(bank -> bank.stream().filter(Sound::nonEmpty).forEach(s -> sendSoundWithDelayIgnoreEmpty(s, outputVariant)));
+        synth.getBanks().forEach(bank -> bank.stream().filter(Sound::isRegular).forEach(s -> sendSoundWithDelayIgnoreEmpty(s, outputVariant)));
     }
 
     public boolean exists(String name) {

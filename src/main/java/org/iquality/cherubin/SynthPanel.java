@@ -114,7 +114,14 @@ public class SynthPanel extends JPanel implements AppExtension {
         buttons.add(makeSaveButton());
         buttons.add(makeDeleteButton());
         buttons.add(makeUploadButton());
-        buttons.add(synthModel.makeSoundDumpCheckBox(() -> isSelected));
+
+        JCheckBox soundDumpCheckBox = synthModel.makeSoundDumpCheckBox(() -> isSelected);
+        buttons.add(soundDumpCheckBox);
+        synthModel.addSynthModelListener(synth -> soundDumpCheckBox.setSelected(synthModel.isListeningToDump()));
+
+        JCheckBox auditionCheckBox = synthModel.makeAuditionCheckBox();
+        buttons.add(auditionCheckBox);
+
         return buttons;
     }
 
@@ -286,9 +293,14 @@ public class SynthPanel extends JPanel implements AppExtension {
                 JTable table = tabTables.get(tab);
                 table.getSelectionModel().setSelectionInterval(soundRow, soundRow);
                 table.scrollRectToVisible(table.getCellRect(soundRow, 0, true));
-                SwingUtilities.invokeLater(() -> onSelected());
+                SwingUtilities.invokeLater(SynthPanel.this::onSelected);
             }
 
+        }
+
+        @Override
+        public void editedSoundCleared(Sound sound) {
+            editedSound.setText("No sound in buffer");
         }
     }
 }

@@ -1,0 +1,8 @@
+TODO:
+1. Verify "Listen to dump"
+2.
+
+Missing features:
+1. Monitor checkbox
+2. Default MIDI input/output settings
+3. Proxy

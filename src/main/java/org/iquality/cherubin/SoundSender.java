@@ -3,9 +3,9 @@ package org.iquality.cherubin;
 import javax.sound.midi.*;
 import java.util.function.Consumer;
 
-public class SoundSender {
+import static org.iquality.cherubin.SoundEditorModel.SOUND_DUMP_DELAY;
 
-    public static final int SOUND_DUMP_DELAY = 500;
+public class SoundSender {
 
     private final ShortMessage probeNoteOn;
     private final ShortMessage probeNoteOff;
@@ -44,15 +44,23 @@ public class SoundSender {
         withReceiver(outputDevice, rcv -> rcv.send(probeNoteOff, -1));
     }
 
-    public void sendSoundWithDelay(MidiDevice outputDevice, MidiMessage message) {
-        sendSound(outputDevice, message);
-        try {
-            Thread.sleep(SOUND_DUMP_DELAY);
-        } catch (InterruptedException ignored) {
-        }
+    public void sendSound(MidiDevice outputDevice, MidiMessage message) {
+        withReceiver(outputDevice, rcv -> rcv.send(Utils.printSysExDump(message), -1));
     }
 
-    public void sendSound(MidiDevice outputDevice, MidiMessage message) {
-        withReceiver(outputDevice, rcv -> rcv.send(message, -1));
+    public void sendAllSoundsOff() {
+        withReceiver(null, (rcv) -> {
+            try {
+                // do an all sounds off (some synths don't properly respond to all notes off)
+                for(int i = 0; i < 16; i++)
+                    rcv.send(new ShortMessage(ShortMessage.CONTROL_CHANGE, i, 120, 0), -1);
+                // do an all notes off (some synths don't properly respond to all sounds off)
+                for(int i = 0; i < 16; i++)
+                    rcv.send(new ShortMessage(ShortMessage.CONTROL_CHANGE, i, 123, 0), -1);
+            } catch (InvalidMidiDataException e) {
+                e.printStackTrace();
+            }
+        });
     }
+
 }

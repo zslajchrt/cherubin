@@ -52,6 +52,11 @@ public class SoundDbPanel extends JPanel implements AppExtension {
                     SwingUtilities.invokeLater(() -> onSelected());
                 }
             }
+
+            @Override
+            public void editedSoundCleared(Sound sound) {
+                editedSound.setText("No sound in buffer");
+            }
         });
     }
 
@@ -67,7 +72,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
     @Override
     public String getExtensionName() {
-        return "Blofeld Sound Base";
+        return "Sound Base";
     }
 
     @Override
@@ -105,6 +110,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
         components.add(makeCategoryFilterCombo());
         components.add(makeSoundSetFilterCombo());
         components.add(soundDbModel.makeSoundDumpCheckBox(() -> isSelected));
+        components.add(soundDbModel.makeAuditionCheckBox());
         return components;
     }
 
@@ -154,12 +160,12 @@ public class SoundDbPanel extends JPanel implements AppExtension {
         return null;
     }
 
-    public static DataFlavor BLOFELD_SOUND_FLAVOR = new DataFlavor(DataFlavor.javaJVMLocalObjectMimeType + ";class=" + Sound.class.getName(), "Sound");
+    public static DataFlavor SOUND_DB_FLAVOR = new DataFlavor(DataFlavor.javaJVMLocalObjectMimeType + ";class=" + Sound.class.getName(), "Sound");
 
     private static final DataFlavor[] soundClipboardFlavors;
 
     static {
-        soundClipboardFlavors = new DataFlavor[]{DataFlavor.stringFlavor, BLOFELD_SOUND_FLAVOR};
+        soundClipboardFlavors = new DataFlavor[]{DataFlavor.stringFlavor, SOUND_DB_FLAVOR};
     }
 
     @Override
@@ -207,7 +213,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
                         if (DataFlavor.stringFlavor.equals(flavor)) {
                             return sound.toString();
-                        } else if (BLOFELD_SOUND_FLAVOR.equals(flavor)) {
+                        } else if (SOUND_DB_FLAVOR.equals(flavor)) {
                             return sound;
                         } else {
                             throw new UnsupportedFlavorException(flavor);

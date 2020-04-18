@@ -1,8 +1,6 @@
 package org.iquality.cherubin.blofeld;
 
-import org.iquality.cherubin.AbstractSound;
-import org.iquality.cherubin.SingleSound;
-import org.iquality.cherubin.SoundCategory;
+import org.iquality.cherubin.*;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;
@@ -10,16 +8,16 @@ import javax.sound.midi.SysexMessage;
 public class BlofeldSingleSound extends AbstractSound implements BlofeldSoundCommon, SingleSound {
 
     private static final String INIT_FILE_NAME = "blofeld-init-single.syx";
-    private static BlofeldInitSysexMessage INIT_SYSEX;
+    private static InitSysexMessage INIT_SYSEX;
 
     public static final int MULTI_SOUND_MSG_LENGTH = 392;
 
     static {
-        INIT_SYSEX = BlofeldSoundCommon.loadInitSysEx(INIT_FILE_NAME, MULTI_SOUND_MSG_LENGTH);
+        INIT_SYSEX = Utils.loadInitSysEx(INIT_FILE_NAME, MULTI_SOUND_MSG_LENGTH);
     }
 
     public BlofeldSingleSound() {
-        super(-1, INIT_SYSEX, "", BlofeldFactory.INSTANCE);
+        this(-1, INIT_SYSEX, "");
     }
 
     public BlofeldSingleSound(int id, SysexMessage sysEx, String soundSetName) {
@@ -36,7 +34,7 @@ public class BlofeldSingleSound extends AbstractSound implements BlofeldSoundCom
     protected SoundCategory getCategoryImp() {
         byte[] msg = getSysEx().getMessage();
         int catId = msg[SDATA_OFFSET + SINGLE_CAT_OFFSET];
-        return SoundCategory.CATEGORIES[catId];
+        return SoundCategory.values()[catId];
     }
 
     @Override
@@ -63,14 +61,13 @@ public class BlofeldSingleSound extends AbstractSound implements BlofeldSoundCom
     }
 
     @Override
-    public BlofeldSingleSound clone(int programBank, int programNumber) {
-        try {
-            byte[] data = getSysEx().getMessage(); // getMessage() returns a copy
-            data[BANK_OFFSET] = (byte) programBank;
-            data[PROGRAM_OFFSET] = (byte) programNumber;
-            return new BlofeldSingleSound(getId(), isEmpty() ? new BlofeldInitSysexMessage(data, data.length) : new SysexMessage(data, data.length), getSoundSetName());
-        } catch (InvalidMidiDataException e) {
-            throw new RuntimeException(e);
-        }
+    protected void patch(byte[] data, int programBank, int programNumber) {
+        data[BANK_OFFSET] = (byte) programBank;
+        data[PROGRAM_OFFSET] = (byte) programNumber;
+    }
+
+    @Override
+    protected void patchForEditBuffer(byte[] data) {
+        patch(data, 0x7F, 0x00);
     }
 }
