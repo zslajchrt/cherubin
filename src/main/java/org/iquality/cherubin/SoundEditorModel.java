@@ -15,8 +15,6 @@ public class SoundEditorModel {
 
     private static final Object SEND_SOUND = "sendSound";
 
-    public static final int SOUND_DUMP_DELAY = 500;
-
     private final SoundSender soundSender;
 
     private MidiDevice dumpInputDevice;
@@ -153,7 +151,7 @@ public class SoundEditorModel {
         }
         MidiDevice outputDevice = appModel.getOutputDevice(sound.getSynthFactory(), outputVariant);
         soundSender.sendSound(outputDevice, sound.getSysEx());
-        delay();
+        MidiDeviceManager.delay();
     }
 
     public JCheckBox makeSoundDumpCheckBox(Supplier<Boolean> activeFlag) {
@@ -203,7 +201,7 @@ public class SoundEditorModel {
 
                 appModel.getExecutor().execute(() -> {
                     SoundEditorModel.this.sendSoundOn(sound, outputVariant);
-                    SoundEditorModel.this.delay();
+                    MidiDeviceManager.delay();
                 });
             }
 
@@ -233,13 +231,6 @@ public class SoundEditorModel {
         if (categoriesColumn >= 0) {
             JComboBox<SoundCategory> categoryComboBox = new JComboBox<>(SoundCategory.values());
             table.getColumnModel().getColumn(SoundDbTableModel.COLUMN_CATEGORY).setCellEditor(new DefaultCellEditor(categoryComboBox));
-        }
-    }
-
-    public void delay() {
-        try {
-            Thread.sleep(SOUND_DUMP_DELAY);
-        } catch (InterruptedException ignored) {
         }
     }
 

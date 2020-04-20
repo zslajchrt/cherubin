@@ -1,10 +1,17 @@
 package org.iquality.cherubin;
 
+import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
+
 import javax.sound.midi.MidiDevice;
+import javax.sound.midi.MidiSystem;
+import javax.sound.midi.MidiUnavailableException;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class MidiDeviceManager {
+
+    private static final int SOUND_DUMP_DELAY = 100;
 
     private final Function<Integer, MidiDevice> systemInputDeviceProvider;
     private final Function<Integer, MidiDevice> systemOutputDeviceProvider;
@@ -40,6 +47,27 @@ public class MidiDeviceManager {
 
     public MidiDevice getOutputDevice(SynthFactory synthFactory, int outputVariant) {
         return synthOutputDeviceProvider.apply(synthFactory).apply(outputVariant);
+    }
+
+    public static void broadcast(Consumer<MidiDevice> action) {
+        for (MidiDevice.Info deviceInfo : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
+            try {
+                MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
+                if (device.getMaxReceivers() != 0) {
+                    if (device.isOpen()) { // MIDI OUT test
+                        action.accept(device);
+                    }
+                }
+            } catch (MidiUnavailableException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    public static void delay() {
+        try {
+            Thread.sleep(SOUND_DUMP_DELAY);
+        } catch (InterruptedException ignored) {
+        }
     }
 
     public static class DuplexDeviceProvider implements Function<Integer, MidiDevice> {

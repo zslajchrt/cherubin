@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static java.awt.BorderLayout.PAGE_START;
+
 public class AppFrame extends JFrame {
     static {
         System.setProperty("apple.laf.useScreenMenuBar", "true");
@@ -37,6 +39,10 @@ public class AppFrame extends JFrame {
 
         this.getContentPane().setPreferredSize(new Dimension(width, height));
 
+        JToolBar toolBar = new JToolBar("Global Controls");
+        GlobalControls.makeToolBar(toolBar);
+        add(toolBar, PAGE_START);
+
         SequencePanel sequencePanel = new SequencePanel(new SequenceModel(appModel));
         SoundDbPanel soundDbTable = new SoundDbPanel(soundDbModel);
         SynthPanel blofeldPanel = new SynthPanel(synthModel);
@@ -50,9 +56,9 @@ public class AppFrame extends JFrame {
         for (AppExtension ext : appExtensions) {
             ext.initialize();
             JPanel tabPanel = new JPanel(new BorderLayout());
-            JPanel toolBar = new JPanel();
-            ext.getToolBarComponents().forEach(toolBar::add);
-            tabPanel.add(toolBar, BorderLayout.PAGE_START);
+            JPanel extToolBar = new JPanel();
+            ext.getToolBarComponents().forEach(extToolBar::add);
+            tabPanel.add(extToolBar, PAGE_START);
             tabPanel.add(ext.getMainPanel(), BorderLayout.CENTER);
 
             JPanel statusBar = makeStatusBar();
@@ -66,7 +72,7 @@ public class AppFrame extends JFrame {
         add(tabbedPane, BorderLayout.CENTER);
 
         JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.add(new RoutingPanel(appModel), BorderLayout.PAGE_START);
+        bottomPanel.add(new RoutingPanel(appModel), PAGE_START);
         add(bottomPanel, BorderLayout.PAGE_END);
 
         addWindowListener(new WindowAdapter() {
