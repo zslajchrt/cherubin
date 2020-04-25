@@ -37,6 +37,10 @@ public class AppModel {
     public void close() {
     }
 
+    public MidiDeviceManager getMidiDeviceManager() {
+        return midiDeviceManager;
+    }
+
     public ExecutorService getExecutor() {
         return executor;
     }

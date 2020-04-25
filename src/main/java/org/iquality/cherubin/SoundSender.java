@@ -5,6 +5,8 @@ import java.util.function.Consumer;
 
 public class SoundSender {
 
+    public static final int ALL_SOUNDS_OFF_DELAY = 50; // just a tentative value
+
     private final ShortMessage probeNoteOn;
     private final ShortMessage probeNoteOff;
 
@@ -49,16 +51,18 @@ public class SoundSender {
     public static void sendAllSoundsOff() {
         MidiDeviceManager.broadcast(device -> {
             withReceiver(device, rcv -> {
+                System.out.println("Sending all sounds off to " + device + " started");
                 // do an all sounds off (some synths don't properly respond to all notes off)
                 for (int i = 0; i < 16; i++) {
                     rcv.send(newControlChangeMessage(i, 120), -1);
-                    MidiDeviceManager.delay();
+                    MidiDeviceManager.delay(ALL_SOUNDS_OFF_DELAY);
                 }
                 // do an all notes off (some synths don't properly respond to all sounds off)
                 for (int i = 0; i < 16; i++) {
                     rcv.send(newControlChangeMessage(i, 123), -1);
-                    MidiDeviceManager.delay();
+                    MidiDeviceManager.delay(50);
                 }
+                System.out.println("Sending all sounds off to " + device + " finished");
             });
         });
     }

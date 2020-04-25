@@ -3,12 +3,10 @@ package org.iquality.cherubin;
 import javax.sound.midi.*;
 import java.io.IOException;
 
-import static org.iquality.cherubin.MidiPortCommunicator.findDevice;
-
 public class MidiProxy {
 
     public interface MidiProxyListener {
-        MidiMessage onMessage(MidiMessage message, long timeStamp);
+        MidiMessage onMessage(MidiMessage message, long timeStamp) throws Exception;
     }
 
     private final MidiDevice in;
@@ -55,7 +53,13 @@ public class MidiProxy {
 
         @Override
         public void send(MidiMessage message, long timeStamp) {
-            MidiMessage alteredMessage = listener.onMessage(message, timeStamp);
+            MidiMessage alteredMessage = null;
+            try {
+                alteredMessage = listener.onMessage(message, timeStamp);
+            } catch (Exception e) {
+                e.printStackTrace();
+                alteredMessage = message;
+            }
             receiver.send(alteredMessage == null ? message : alteredMessage, timeStamp);
         }
 
@@ -63,5 +67,37 @@ public class MidiProxy {
         public void close() {
             receiver.close();
         }
+    }
+
+    public static void main(String[] args) throws IOException {
+        MidiDevice proxyIn = MidiDeviceManager.findDevice("Arturia", true);
+        MidiDevice proxyOut = MidiDeviceManager.findDevice("VirtualMIDICable2", false);
+        new MidiProxy(proxyIn, proxyOut, new MidiProxyListener() {
+            @Override
+            public MidiMessage onMessage(MidiMessage message, long timeStamp) throws InvalidMidiDataException {
+                if (message instanceof ShortMessage) {
+                    ShortMessage shortMessage = (ShortMessage) message;
+                    int command = shortMessage.getCommand();
+                    if (command == ShortMessage.NOTE_ON || command == ShortMessage.NOTE_OFF) {
+                        int data1 = shortMessage.getData1();
+                        int data2 = shortMessage.getData2();
+                        int channel = shortMessage.getChannel();
+                        switch (data1) {
+                            case 0x25:
+                                channel = 10;
+                            default:
+                        }
+
+                        message = new ShortMessage(command, channel, data1, data2);
+                        System.out.printf("%02X %02X %02X %02X\n", command, data1, data2, channel);
+                    }
+
+                }
+                return message;
+            }
+        });
+
+        System.in.read();
+
     }
 }

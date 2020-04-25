@@ -40,7 +40,7 @@ public class AppFrame extends JFrame {
         this.getContentPane().setPreferredSize(new Dimension(width, height));
 
         JToolBar toolBar = new JToolBar("Global Controls");
-        GlobalControls.makeToolBar(toolBar);
+        GlobalControls.makeToolBar(toolBar, this);
         add(toolBar, PAGE_START);
 
         SequencePanel sequencePanel = new SequencePanel(new SequenceModel(appModel));
@@ -92,6 +92,10 @@ public class AppFrame extends JFrame {
         setLocationRelativeTo(null);
 
         notifySelected();
+    }
+
+    public AppModel getAppModel() {
+        return appModel;
     }
 
     private JPanel makeStatusBar() {
@@ -207,21 +211,21 @@ public class AppFrame extends JFrame {
         //Supplier<MidiDevice> rightOut = NullMidiPort::new;
         //Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Bass Station", false);
 
-        MidiDevice systemIn = MidiPortCommunicator.findDevice("Avid 003 Rack Port 1", true);
-        MidiDevice systemOut = MidiPortCommunicator.findDevice("VirtualMIDICable2", false);
+        MidiDevice systemIn = MidiDeviceManager.findDevice("Avid 003 Rack Port 1", true);
+        MidiDevice systemOut = MidiDeviceManager.findDevice("VirtualMIDICable2", false);
         //MidiDevice systemOut = MidiPortCommunicator.findDevice("Peak", false);
 
-        MidiDevice blofeldIn = MidiPortCommunicator.findDevice("Blofeld", true);
-        MidiDevice blofeldOut = MidiPortCommunicator.findDevice("Blofeld", false);
+        MidiDevice blofeldIn = MidiDeviceManager.findDevice("Blofeld", true);
+        MidiDevice blofeldOut = MidiDeviceManager.findDevice("Blofeld", false);
 
-        MidiDevice bassStationIn = MidiPortCommunicator.findDevice("Bass Station", true);
-        MidiDevice bassStationOut = MidiPortCommunicator.findDevice("Bass Station", false);
+        MidiDevice bassStationIn = MidiDeviceManager.findDevice("Bass Station", true);
+        MidiDevice bassStationOut = MidiDeviceManager.findDevice("Bass Station", false);
 
-        MidiDevice peakIn = MidiPortCommunicator.findDevice("Peak", true);
-        MidiDevice peakOut = MidiPortCommunicator.findDevice("Peak", false);
+        MidiDevice peakIn = MidiDeviceManager.findDevice("Peak", true);
+        MidiDevice peakOut = MidiDeviceManager.findDevice("Peak", false);
 
-        Function<Integer, MidiDevice> systemMidiInputProvider = (inputVariant) -> systemIn;
-        Function<Integer, MidiDevice> systemMidiOutputProvider = (outputVariant) -> systemOut;
+//        Function<Integer, MidiDevice> systemMidiInputProvider = (inputVariant) -> systemIn;
+//        Function<Integer, MidiDevice> systemMidiOutputProvider = (outputVariant) -> systemOut;
 
         MidiDeviceManager.DuplexDeviceProvider blofeldProviderOut = new MidiDeviceManager.DuplexDeviceProvider(() -> blofeldOut, () -> systemOut);
 
@@ -249,7 +253,9 @@ public class AppFrame extends JFrame {
             }
         };
 
-        AppModel appModel = new AppModel(new MidiDeviceManager(systemMidiInputProvider, systemMidiOutputProvider, synthMidiInputProvider, synthMidiOutputProvider));
+        //MidiDeviceManager midiDeviceManager = new MidiDeviceManager(systemMidiInputProvider, systemMidiOutputProvider, synthMidiInputProvider, synthMidiOutputProvider);
+        MidiDeviceManager midiDeviceManager = MidiDeviceManager.create(synthMidiInputProvider, synthMidiOutputProvider);
+        AppModel appModel = new AppModel(midiDeviceManager);
 
 //        MidiProxy midiProxy = new MidiProxy(appModel, new MidiProxy.MidiProxyListener() {
 //            @Override
