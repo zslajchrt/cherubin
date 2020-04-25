@@ -1,20 +1,22 @@
 package org.iquality.cherubin;
 
-import javax.sound.midi.MidiDevice;
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.Receiver;
 import javax.sound.midi.Sequence;
 import java.io.File;
+import java.util.List;
 
 public class SequenceModel {
 
-    private final AppModel appModel;
+    private final MidiDeviceManager midiDeviceManager;
+    private final MidiServices midiServices;
 
     private Sequence sequence;
 
-    public SequenceModel(AppModel appModel) {
-        this.appModel = appModel;
-        this.sequence = appModel.createSequenceWithOneTrack();
+    public SequenceModel(MidiServices midiServices, MidiDeviceManager midiDeviceManager) {
+        this.midiServices = midiServices;
+        this.midiDeviceManager = midiDeviceManager;
+        this.sequence = MidiServices.createSequenceWithOneTrack();
     }
 
     public Sequence getSequence() {
@@ -22,34 +24,38 @@ public class SequenceModel {
     }
 
     public void loadSequence(File file) {
-        sequence = appModel.loadSequence(file);
+        sequence = MidiServices.loadSequence(file);
     }
 
     public void saveSequence(File file) {
-        appModel.saveSequence(sequence, file);
+        MidiServices.saveSequence(sequence, file);
     }
 
     public void initializeSequence() {
-        sequence = appModel.createSequenceWithOneTrack();
+        sequence = MidiServices.createSequenceWithOneTrack();
     }
 
     public void recordSequence(Receiver listener) {
-        appModel.recordSequence(sequence, listener, appModel.getInputDevice());
+        midiServices.recordSequence(sequence, listener, midiDeviceManager.getInputDevice());
     }
 
     public void stopRecordingSequence() {
-        appModel.stopRecordingSequence();
+        midiServices.stopRecordingSequence();
     }
 
     public void playSequence(Receiver listener) {
-        appModel.playSequence(sequence, listener, appModel.getOutputDevice());
+        midiServices.playSequence(sequence, listener, midiDeviceManager.getOutputDevice());
     }
 
     public void stopPlayingSequence() {
-        appModel.stopPlayingSequence();
+        midiServices.stopPlayingSequence();
     }
 
     public void sendMidiMessage(MidiMessage message, int outputVariant) {
-        appModel.sendMidiMessage(message, appModel.getOutputDevice(outputVariant));
+        midiServices.sendMidiMessage(message, midiDeviceManager.getOutputDevice(outputVariant));
+    }
+
+    public void sendMidiMessages(List<MidiMessage> midiMessages, int outputVariant) {
+        midiServices.sendMidiMessages(midiMessages, midiDeviceManager.getOutputDevice(outputVariant));
     }
 }

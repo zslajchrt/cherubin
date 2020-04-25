@@ -16,6 +16,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class SequenceTable extends JTable {
 
@@ -54,14 +55,20 @@ public class SequenceTable extends JTable {
         });
 
         JPopupMenu popupMenu = new JPopupMenu();
+
         HexViewAction hexViewAction = new HexViewAction();
         JMenuItem hexViewItem = new JMenuItem(hexViewAction);
         getSelectionModel().addListSelectionListener(hexViewAction);
+
         SaveSysExAction saveSysExAction = new SaveSysExAction();
         getSelectionModel().addListSelectionListener(saveSysExAction);
         JMenuItem saveSysExItem = new JMenuItem(saveSysExAction);
+
+        JMenuItem sendItem = new JMenuItem(new SendMessageAction());
+
         popupMenu.add(hexViewItem);
         popupMenu.add(saveSysExItem);
+        popupMenu.add(sendItem);
 
         setComponentPopupMenu(popupMenu);
     }
@@ -175,4 +182,21 @@ public class SequenceTable extends JTable {
         }
     }
 
+    private class SendMessageAction extends AbstractAction {
+        public SendMessageAction() {
+            super("Send");
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            List<MidiEvent> selectedEvents = getSelectedEvents();
+            if (selectedEvents.isEmpty()) {
+                return;
+            }
+
+            List<MidiMessage> midiMessages = selectedEvents.stream().map(MidiEvent::getMessage).collect(Collectors.toList());
+            int outputVariant = MidiDeviceManager.getOutputVariant(e.getModifiers());
+            sequenceTableModel.sendMidiMessages(midiMessages, outputVariant);
+        }
+    }
 }

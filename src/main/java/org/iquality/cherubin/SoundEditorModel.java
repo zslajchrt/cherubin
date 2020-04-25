@@ -15,7 +15,7 @@ public class SoundEditorModel {
 
     private static final Object SEND_SOUND = "sendSound";
 
-    private final SoundSender soundSender;
+    private final MidiServices midiServices;
 
     private MidiDevice dumpInputDevice;
     private Transmitter dumpTransmitter;
@@ -37,7 +37,7 @@ public class SoundEditorModel {
 
     public SoundEditorModel(AppModel appModel) {
         this.appModel = appModel;
-        this.soundSender = new SoundSender();
+        this.midiServices = new MidiServices();
     }
 
     public void addSoundEditorModelListener(SoundEditorModelListener listener) {
@@ -121,6 +121,9 @@ public class SoundEditorModel {
             dumpReceiver.close();
             dumpReceiver = null;
         }
+        if (dumpInputDevice != null) {
+            dumpInputDevice.close();
+        }
     }
 
     public boolean isListeningToDump() {
@@ -129,20 +132,20 @@ public class SoundEditorModel {
 
     public void sendSoundOn(Sound sound, int outputVariant) {
         MidiDevice outputDevice = appModel.getOutputDevice(sound.getSynthFactory(), outputVariant);
-        soundSender.probeNoteOff(outputDevice);
+        midiServices.probeNoteOff(outputDevice);
         if (!sound.isInit()) {
             // Do not update the synth's edit buffer with the initial (empty) sound
             SysexMessage sysEx = sound.cloneForEditBuffer().getSysEx();
-            soundSender.sendSound(outputDevice, sysEx);
+            midiServices.sendSound(outputDevice, sysEx);
         }
         if (audition) {
-            soundSender.probeNoteOn(outputDevice);
+            midiServices.probeNoteOn(outputDevice);
         }
     }
 
     public void sendSoundOff(Sound sound, int outputVariant) {
         MidiDevice outputDevice = appModel.getOutputDevice(sound.getSynthFactory(), outputVariant);
-        soundSender.probeNoteOff(outputDevice);
+        midiServices.probeNoteOff(outputDevice);
     }
 
     public void sendSoundWithDelayIgnoreEmpty(Sound sound, int outputVariant) {
@@ -150,8 +153,8 @@ public class SoundEditorModel {
             return;
         }
         MidiDevice outputDevice = appModel.getOutputDevice(sound.getSynthFactory(), outputVariant);
-        soundSender.sendSound(outputDevice, sound.getSysEx());
-        MidiDeviceManager.delay();
+        midiServices.sendSound(outputDevice, sound.getSysEx());
+        MidiServices.delay();
     }
 
     public JCheckBox makeSoundDumpCheckBox(Supplier<Boolean> activeFlag) {
@@ -201,7 +204,7 @@ public class SoundEditorModel {
 
                 appModel.getExecutor().execute(() -> {
                     SoundEditorModel.this.sendSoundOn(sound, outputVariant);
-                    MidiDeviceManager.delay();
+                    MidiServices.delay();
                 });
             }
 
@@ -232,19 +235,6 @@ public class SoundEditorModel {
             JComboBox<SoundCategory> categoryComboBox = new JComboBox<>(SoundCategory.values());
             table.getColumnModel().getColumn(SoundDbTableModel.COLUMN_CATEGORY).setCellEditor(new DefaultCellEditor(categoryComboBox));
         }
-    }
-
-    public static int getOutputVariant(int keyModifiers) {
-        if ((keyModifiers & (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) == (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) {
-            return 3;
-        } else if ((keyModifiers & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK) {
-            return 1;
-        } else if ((keyModifiers & InputEvent.ALT_DOWN_MASK) == InputEvent.ALT_DOWN_MASK) {
-            return 2;
-        } else {
-            return 0;
-        }
-
     }
 
 }

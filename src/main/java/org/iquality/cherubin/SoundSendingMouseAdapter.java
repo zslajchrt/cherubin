@@ -1,7 +1,6 @@
 package org.iquality.cherubin;
 
 import javax.swing.*;
-import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -22,7 +21,7 @@ public abstract class SoundSendingMouseAdapter<T> extends MouseAdapter {
             JTable target = (JTable) e.getSource();
             int row = target.getSelectedRow();
             this.sound = getValueAt(row);
-            outputVariant = SoundEditorModel.getOutputVariant(e.getModifiersEx());
+            outputVariant = MidiDeviceManager.getOutputVariant(e.getModifiersEx());
 
             sendSoundOn(sound, outputVariant);
         }

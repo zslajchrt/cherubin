@@ -26,6 +26,9 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
     private boolean isSelected;
 
+    private final CopyAction copyAction;
+    private final PasteAction pasteAction;
+
     public SoundDbPanel(SoundDbModel soundDbModel) {
         super(new BorderLayout());
 
@@ -58,6 +61,9 @@ public class SoundDbPanel extends JPanel implements AppExtension {
                 editedSound.setText("No sound in buffer");
             }
         });
+
+        this.copyAction = new CopyAction();
+        this.pasteAction = new PasteAction();
     }
 
     private int findSoundInTable(Sound sound) {
@@ -170,87 +176,91 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
     @Override
     public Action getCopyAction() {
-        return new AbstractAction() {
-            {
-                setEnabled(false);
-
-                soundDbTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-                    @Override
-                    public void valueChanged(ListSelectionEvent e) {
-                        if (!e.getValueIsAdjusting()) {
-                            setEnabled(true);
-                        }
-                    }
-                });
-            }
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Clipboard clipboard = getSystemClipboard();
-                clipboard.setContents(new Transferable() {
-                    @Override
-                    public DataFlavor[] getTransferDataFlavors() {
-                        return soundClipboardFlavors;
-                    }
-
-                    @Override
-                    public boolean isDataFlavorSupported(DataFlavor flavor) {
-                        for (DataFlavor soundClipboardFlavor : soundClipboardFlavors) {
-                            if (soundClipboardFlavor.equals(flavor)) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    }
-
-                    @Override
-                    public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
-                        int row = soundDbTable.getSelectedRow();
-                        if (row < 0) {
-                            return null; // TODO
-                        }
-                        Sound sound = (Sound) soundDbTable.getValueAt(row, SoundDbTableModel.COLUMN_NAME);
-
-                        if (DataFlavor.stringFlavor.equals(flavor)) {
-                            return sound.toString();
-                        } else if (SOUND_DB_FLAVOR.equals(flavor)) {
-                            return sound;
-                        } else {
-                            throw new UnsupportedFlavorException(flavor);
-                        }
-                    }
-                }, null);
-            }
-        };
+        return copyAction;
     }
 
     @Override
     public Action getPasteAction() {
-        return new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Clipboard clipboard = getSystemClipboard();
-                try {
-                    if (!clipboard.isDataFlavorAvailable(SequencePanel.MIDI_EVENTS_FLAVOR)) {
-                        return;
-                    }
-                    MidiEvents events = (MidiEvents) clipboard.getData(SequencePanel.MIDI_EVENTS_FLAVOR);
+        return pasteAction;
+    }
 
-                    String soundSetName = JOptionPane.showInputDialog("Please enter sound set name: ");
-                    if (soundSetName != null) {
-                        SoundSet<Sound> soundSet = SoundDbModel.midiEventsToSoundSet(events, soundSetName);
-                        if (soundSet != null) {
-                            soundDbTable.tableModel.addSoundSet(soundSet);
-                            JOptionPane.showMessageDialog(null, soundSet.sounds.size() + " new sounds imported from " + events.getEvents().size(), "Sound import summary", JOptionPane.INFORMATION_MESSAGE);
-                        } else {
-                            JOptionPane.showMessageDialog(null, "No synth factory found for sysex", "Sound import error", JOptionPane.ERROR_MESSAGE);
+    private class CopyAction extends AbstractAction {
+        {
+            setEnabled(false);
+
+            soundDbTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+                @Override
+                public void valueChanged(ListSelectionEvent e) {
+                    if (!e.getValueIsAdjusting()) {
+                        setEnabled(true);
+                    }
+                }
+            });
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Clipboard clipboard = getSystemClipboard();
+            clipboard.setContents(new Transferable() {
+                @Override
+                public DataFlavor[] getTransferDataFlavors() {
+                    return soundClipboardFlavors;
+                }
+
+                @Override
+                public boolean isDataFlavorSupported(DataFlavor flavor) {
+                    for (DataFlavor soundClipboardFlavor : soundClipboardFlavors) {
+                        if (soundClipboardFlavor.equals(flavor)) {
+                            return true;
                         }
                     }
-
-                } catch (UnsupportedFlavorException | IOException ex) {
-                    throw new RuntimeException(ex);
+                    return false;
                 }
+
+                @Override
+                public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+                    int row = soundDbTable.getSelectedRow();
+                    if (row < 0) {
+                        return null; // TODO
+                    }
+                    Sound sound = (Sound) soundDbTable.getValueAt(row, SoundDbTableModel.COLUMN_NAME);
+
+                    if (DataFlavor.stringFlavor.equals(flavor)) {
+                        return sound.toString();
+                    } else if (SOUND_DB_FLAVOR.equals(flavor)) {
+                        return sound;
+                    } else {
+                        throw new UnsupportedFlavorException(flavor);
+                    }
+                }
+            }, null);
+        }
+    }
+
+    private class PasteAction extends AbstractAction {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Clipboard clipboard = getSystemClipboard();
+            try {
+                if (!clipboard.isDataFlavorAvailable(SequencePanel.MIDI_EVENTS_FLAVOR)) {
+                    return;
+                }
+                MidiEvents events = (MidiEvents) clipboard.getData(SequencePanel.MIDI_EVENTS_FLAVOR);
+
+                String soundSetName = JOptionPane.showInputDialog("Please enter sound set name: ");
+                if (soundSetName != null) {
+                    SoundSet<Sound> soundSet = SoundDbModel.midiEventsToSoundSet(events, soundSetName);
+                    if (soundSet != null) {
+                        soundDbTable.tableModel.addSoundSet(soundSet);
+                        JOptionPane.showMessageDialog(null, soundSet.sounds.size() + " new sounds imported from " + events.getEvents().size(), "Sound import summary", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "No synth factory found for sysex", "Sound import error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+
+            } catch (UnsupportedFlavorException | IOException ex) {
+                throw new RuntimeException(ex);
             }
-        };
+        }
     }
 }

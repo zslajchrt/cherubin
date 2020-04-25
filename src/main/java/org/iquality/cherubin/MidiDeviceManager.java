@@ -2,13 +2,10 @@ package org.iquality.cherubin;
 
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
 
-import javax.sound.midi.MidiDevice;
-import javax.sound.midi.MidiSystem;
-import javax.sound.midi.MidiUnavailableException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import javax.sound.midi.*;
+import java.awt.event.InputEvent;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -17,7 +14,16 @@ import java.util.stream.Collectors;
 
 public class MidiDeviceManager {
 
-    private static final int SOUND_DUMP_DELAY = 100;
+    public interface MidiDevicesChangeListener {
+        void beforeMidiDevicesChange(List<MidiDevice> devices, boolean midiIn);
+
+        void afterMidiDevicesChange(List<MidiDevice> devices, boolean midiIn);
+    }
+
+    public interface MessageListener {
+        MidiMessage onMessage(MidiMessage message, long timeStamp) throws Exception;
+    }
+
     private static final String CORE_MIDI_PREFIX = "CoreMIDI4J - ";
     public static final String MIDI_IN_DEVICES_PREF_KEY = "midiInDevices";
     public static final String MIDI_OUT_DEVICES_PREF_KEY = "midiOutDevices";
@@ -27,20 +33,21 @@ public class MidiDeviceManager {
     private final Function<SynthFactory, Function<Integer, MidiDevice>> synthInputDeviceProvider;
     private final Function<SynthFactory, Function<Integer, MidiDevice>> synthOutputDeviceProvider;
 
-    public MidiDeviceManager(Function<Integer, MidiDevice> systemInputDeviceProvider, Function<Integer, MidiDevice> systemOutputDeviceProvider, Function<SynthFactory, Function<Integer, MidiDevice>> synthInputDeviceProvider, Function<SynthFactory, Function<Integer, MidiDevice>> synthOutputDeviceProvider) {
-        this.systemInputDeviceProvider = systemInputDeviceProvider;
-        this.systemOutputDeviceProvider = systemOutputDeviceProvider;
+    private final List<MidiDevicesChangeListener> deviceChangeListeners = new ArrayList<>();
+
+    public MidiDeviceManager(List<MidiDevice> initialInDevices, List<MidiDevice> initialOutDevices, Function<SynthFactory, Function<Integer, MidiDevice>> synthInputDeviceProvider, Function<SynthFactory, Function<Integer, MidiDevice>> synthOutputDeviceProvider) {
+        this.systemInputDeviceProvider = createSystemDeviceProvider(initialInDevices);
+        this.systemOutputDeviceProvider = createSystemDeviceProvider(initialOutDevices);
         this.synthInputDeviceProvider = synthInputDeviceProvider;
         this.synthOutputDeviceProvider = synthOutputDeviceProvider;
     }
 
     public static MidiDeviceManager create(Function<SynthFactory, Function<Integer, MidiDevice>> synthInputDeviceProvider, Function<SynthFactory, Function<Integer, MidiDevice>> synthOutputDeviceProvider) {
-        return new MidiDeviceManager(createSystemDeviceProvider(true), createSystemDeviceProvider(false), synthInputDeviceProvider, synthOutputDeviceProvider);
+        return new MidiDeviceManager(getInitialDevices(true), getInitialDevices(false), synthInputDeviceProvider, synthOutputDeviceProvider);
     }
 
-    private static Function<Integer, MidiDevice> createSystemDeviceProvider(boolean midiIn) {
-        List<MidiDevice> initialDevices = getInitialDevices(midiIn);
-        return (alt) -> createMultiplexDeviceSupplier(initialDevices).get();
+    private static Function<Integer, MidiDevice> createSystemDeviceProvider(List<MidiDevice> devices) {
+        return (alt) -> createMultiplexDeviceSupplier(devices).get();
     }
 
     public static List<MidiDevice> getInitialDevices(boolean midiIn) {
@@ -87,24 +94,12 @@ public class MidiDeviceManager {
     }
 
     public static List<MidiDevice> getAllDevices() {
-        try {
-            List<MidiDevice> midiDevices = new ArrayList<>();
-            for (MidiDevice.Info deviceInfo : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
-                MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
-                midiDevices.add(device);
-            }
-            return midiDevices;
-        } catch (MidiUnavailableException e) {
-            throw new RuntimeException(e);
+        List<MidiDevice> midiDevices = new ArrayList<>();
+        for (MidiDevice.Info deviceInfo : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
+            MidiDevice device = MidiDeviceWrapper.create(deviceInfo);
+            midiDevices.add(device);
         }
-    }
-
-    public static List<MidiDevice> getAvailableInputDevices() {
-        return getAvailableDevices(true);
-    }
-
-    public static List<MidiDevice> getAvailableOutputDevices() {
-        return getAvailableDevices(false);
+        return midiDevices;
     }
 
     public static boolean isOfDirection(MidiDevice device, boolean midiIn) {
@@ -115,21 +110,30 @@ public class MidiDeviceManager {
         return getAllDevices().stream().filter(device -> isOfDirection(device, midiIn)).collect(Collectors.toList());
     }
 
-    public MidiDevice getInputDevice() {
-        return systemInputDeviceProvider.apply(0);
-    }
-
-    public MidiDevice getInputDevice(int inputVariant) {
-        return systemInputDeviceProvider.apply(inputVariant);
+    public static int getOutputVariant(int keyModifiers) {
+        if ((keyModifiers & (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) == (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) {
+            return 3;
+        } else if ((keyModifiers & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK) {
+            return 1;
+        } else if ((keyModifiers & InputEvent.ALT_DOWN_MASK) == InputEvent.ALT_DOWN_MASK) {
+            return 2;
+        } else {
+            return 0;
+        }
     }
 
     public void setSystemDeviceProvider(List<MidiDevice> devices, boolean midiIn) {
-        Supplier<MidiDevice> multiplexDeviceSupplier = MidiDeviceManager.createMultiplexDeviceSupplier(devices);
-        setSystemDeviceProvider((alt) -> multiplexDeviceSupplier.get(), midiIn);
+        fireMidiDeviceChange(devices, midiIn, true);
+        try {
+            Supplier<MidiDevice> multiplexDeviceSupplier = MidiDeviceManager.createMultiplexDeviceSupplier(devices);
+            setSystemDeviceProvider((alt) -> multiplexDeviceSupplier.get(), midiIn);
 
-        Preferences preferences = Preferences.userNodeForPackage(MidiDeviceManager.class);
-        String midiDevicesKey = midiIn ? MIDI_IN_DEVICES_PREF_KEY : MIDI_OUT_DEVICES_PREF_KEY;
-        preferences.put(midiDevicesKey, getConcatDeviceNames(devices));
+            Preferences preferences = Preferences.userNodeForPackage(MidiDeviceManager.class);
+            String midiDevicesKey = midiIn ? MIDI_IN_DEVICES_PREF_KEY : MIDI_OUT_DEVICES_PREF_KEY;
+            preferences.put(midiDevicesKey, getConcatDeviceNames(devices));
+        } finally {
+            fireMidiDeviceChange(devices, midiIn, false);
+        }
     }
 
     public void setSystemDeviceProvider(Function<Integer, MidiDevice> newSystemDeviceProvider, boolean midiIn) {
@@ -138,6 +142,14 @@ public class MidiDeviceManager {
         } else {
             this.systemOutputDeviceProvider = newSystemDeviceProvider;
         }
+    }
+
+    public MidiDevice getInputDevice() {
+        return systemInputDeviceProvider.apply(0);
+    }
+
+    public MidiDevice getInputDevice(int inputVariant) {
+        return systemInputDeviceProvider.apply(inputVariant);
     }
 
     public MidiDevice getInputDevice(SynthFactory synthFactory, int inputVariant) {
@@ -161,19 +173,12 @@ public class MidiDeviceManager {
             try {
                 MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
                 if (device.getMaxReceivers() != 0) {
-                    device.isOpen();
+                    device.open();
                     new Thread(() -> action.accept(device)).start();
                 }
             } catch (MidiUnavailableException e) {
                 e.printStackTrace();
             }
-        }
-    }
-
-    public static void delay(long t) {
-        try {
-            Thread.sleep(t);
-        } catch (InterruptedException ignored) {
         }
     }
 
@@ -211,10 +216,6 @@ public class MidiDeviceManager {
         return sb.toString();
     }
 
-    public static void delay() {
-        delay(SOUND_DUMP_DELAY);
-    }
-
     public static Supplier<MidiDevice> createMultiplexDeviceSupplier(List<MidiDevice> deviceSuppliers) {
         if (deviceSuppliers.isEmpty()) {
             return () -> NullMidiPort.INSTANCE;
@@ -229,6 +230,24 @@ public class MidiDeviceManager {
             return () -> midiDevice;
         } else {
             return new DuplexMidiPortSupplier(() -> midiDevice, createMultiplexDeviceSupplier(deviceSuppliers, index + 1));
+        }
+    }
+
+    public void addMidiDeviceChangeListener(MidiDevicesChangeListener listener) {
+        deviceChangeListeners.add(listener);
+    }
+
+    public void removeMidiDeviceChangeListener(MidiDevicesChangeListener listener) {
+        deviceChangeListeners.remove(listener);
+    }
+
+    private void fireMidiDeviceChange(List<MidiDevice> devices, boolean midiIn, boolean before) {
+        for (MidiDevicesChangeListener deviceChangeListener : deviceChangeListeners) {
+            if (before) {
+                deviceChangeListener.beforeMidiDevicesChange(devices, midiIn);
+            } else {
+                deviceChangeListener.afterMidiDevicesChange(devices, midiIn);
+            }
         }
     }
 
@@ -260,6 +279,7 @@ public class MidiDeviceManager {
             return duplex;
         }
     }
+
     public static class DuplexDeviceProvider implements Function<Integer, MidiDevice> {
 
         private final Supplier<MidiDevice> deviceSupplier1;
@@ -288,15 +308,29 @@ public class MidiDeviceManager {
 
     }
 
-    public static class MidiDeviceWrapper {
+    public static class MidiDeviceWrapper implements MidiDevice {
         private final MidiDevice midiDevice;
 
-        public MidiDeviceWrapper(MidiDevice midiDevice) {
-            this.midiDevice = midiDevice;
+        volatile int refCnt;
+
+        private final List<MessageListener> inMessageListeners = new Vector<>();
+        private final List<MessageListener> outMessageListeners = new Vector<>();
+
+        final List<Receiver> receivers = Collections.synchronizedList(new Vector<>());
+        final List<Transmitter> transmitters = Collections.synchronizedList(new Vector<>());
+
+        static final ConcurrentHashMap<MidiDevice.Info, MidiDeviceWrapper> cache = new ConcurrentHashMap<>();
+
+        private MidiDeviceWrapper(MidiDevice.Info midiDeviceInfo) {
+            try {
+                this.midiDevice = MidiSystem.getMidiDevice(midiDeviceInfo);
+            } catch (MidiUnavailableException e) {
+                throw new RuntimeException(e);
+            }
         }
 
-        public MidiDevice getMidiDevice() {
-            return midiDevice;
+        public static synchronized MidiDevice create(MidiDevice.Info info) {
+            return info == null ? null : cache.computeIfAbsent(info, MidiDeviceWrapper::new);
         }
 
         @Override
@@ -316,6 +350,159 @@ public class MidiDeviceManager {
         public String toString() {
             return getDeviceName(midiDevice);
         }
-    }
 
+        @Override
+        public Info getDeviceInfo() {
+            return midiDevice.getDeviceInfo();
+        }
+
+        @Override
+        public synchronized void open() throws MidiUnavailableException {
+            System.out.println("MIDI open " + refCnt + " (" + this + ")");
+            if (refCnt == 0) {
+                midiDevice.open();
+            }
+            refCnt++;
+        }
+
+        @Override
+        public synchronized void close() {
+            if (refCnt == 0) {
+                System.err.println("Warning: Unbalanced reference counting (" + this + ")");
+            } else {
+                refCnt--;
+                if (refCnt == 0) {
+                    System.out.println("MIDI closing the delegate " + refCnt + " (" + this + ")");
+                    midiDevice.close();
+                }
+            }
+            System.out.println("MIDI close " + refCnt + " (" + this + ")");
+        }
+
+        @Override
+        public synchronized boolean isOpen() {
+            return refCnt > 0 || midiDevice.isOpen();
+        }
+
+        @Override
+        public long getMicrosecondPosition() {
+            return midiDevice.getMicrosecondPosition();
+        }
+
+        @Override
+        public int getMaxReceivers() {
+            return midiDevice.getMaxReceivers();
+        }
+
+        @Override
+        public int getMaxTransmitters() {
+            return midiDevice.getMaxTransmitters();
+        }
+
+        @Override
+        public Receiver getReceiver() throws MidiUnavailableException {
+            return new MidiDeviceReceiver() {
+
+                {
+                    receivers.add(this);
+                }
+
+                final Receiver delegate = midiDevice.getReceiver();
+
+                @Override
+                public MidiDevice getMidiDevice() {
+                    return MidiDeviceWrapper.this;
+                }
+
+                @Override
+                public void send(MidiMessage message, long timeStamp) {
+                    fireOnActivity(false, message, timeStamp);
+                    delegate.send(message, timeStamp);
+                }
+
+                @Override
+                public void close() {
+                    delegate.close();
+                    receivers.remove(this);
+                }
+            };
+        }
+
+        @Override
+        public List<Receiver> getReceivers() {
+            return receivers;
+        }
+
+        @Override
+        public Transmitter getTransmitter() throws MidiUnavailableException {
+            return new MidiDeviceTransmitter() {
+
+                {
+                    transmitters.add(this);
+                }
+
+                final Transmitter delegate = midiDevice.getTransmitter();
+
+                @Override
+                public MidiDevice getMidiDevice() {
+                    return MidiDeviceWrapper.this;
+                }
+
+                @Override
+                public void setReceiver(Receiver receiver) {
+                    delegate.setReceiver(new Receiver() {
+                        @Override
+                        public void send(MidiMessage message, long timeStamp) {
+                            fireOnActivity(true, message, timeStamp);
+                            receiver.send(message, timeStamp);
+                        }
+
+                        @Override
+                        public void close() {
+                            receiver.close();
+                        }
+                    });
+                }
+
+                @Override
+                public Receiver getReceiver() {
+                    return delegate.getReceiver();
+                }
+
+                @Override
+                public void close() {
+                    delegate.close();
+                    transmitters.remove(this);
+                }
+            };
+        }
+
+        @Override
+        public List<Transmitter> getTransmitters() {
+            return midiDevice.getTransmitters();
+        }
+
+        public void addActivityListener(MessageListener listener, boolean midiIn) {
+            if (midiIn) {
+                inMessageListeners.add(listener);
+            } else {
+                outMessageListeners.add(listener);
+            }
+        }
+
+        void fireOnActivity(boolean midiIn, MidiMessage message, long timeStamp) {
+            for (MessageListener listener : (midiIn ? inMessageListeners : outMessageListeners)) {
+                try {
+                    listener.onMessage(message, timeStamp);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        public void removeActivityListener(MidiActivityPanel.MidiDeviceSlot midiDeviceSlot, boolean midiIn) {
+            List<MessageListener> messageListeners = midiIn ? inMessageListeners : outMessageListeners;
+            messageListeners.remove(midiDeviceSlot);
+        }
+    }
 }

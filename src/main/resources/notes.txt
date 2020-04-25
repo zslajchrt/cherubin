@@ -1,8 +1,14 @@
-TODO:
-1. Verify "Listen to dump"
-2.
 
 Missing features:
-1. Monitor checkbox
 2. Default MIDI input/output settings
+5. Show actual MIDI Input/Output for key modifiers being pressed
+6. Labels for filter combos
+7. Store MIDI files to DB
+9. Dump request
+10. A popup in SoundDb a VirtualSynth tables to display SysEx, send etc...
+
+Features:
+1. Monitor checkbox
 3. Proxy
+4. Panic button, All notes off
+8. MIDI traffic indicators for all inputs/outputs (horizontal LEDs in the status bar)

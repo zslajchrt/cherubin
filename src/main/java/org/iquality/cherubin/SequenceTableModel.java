@@ -3,6 +3,7 @@ package org.iquality.cherubin;
 import javax.sound.midi.*;
 import javax.swing.table.AbstractTableModel;
 import java.io.File;
+import java.util.List;
 
 public class SequenceTableModel extends AbstractTableModel {
     public static final int COLUMN_TIMESTAMP = 0;
@@ -76,5 +77,9 @@ public class SequenceTableModel extends AbstractTableModel {
 
     public void sendMidiMessage(MidiMessage message, int outputVariant) {
         sequenceModel.sendMidiMessage(message, outputVariant);
+    }
+
+    public void sendMidiMessages(List<MidiMessage> midiMessages, int outputVariant) {
+        sequenceModel.sendMidiMessages(midiMessages, outputVariant);
     }
 }

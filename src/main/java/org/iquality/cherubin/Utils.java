@@ -26,7 +26,7 @@ public class Utils {
     }
 
     public static <T extends MidiMessage> T printSysExDump(T message) {
-        if (true) {
+        if (false) {
             return message;
         }
 

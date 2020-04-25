@@ -20,6 +20,8 @@ public class SynthPanel extends JPanel implements AppExtension {
     private final JLabel synthInfo = new JLabel("No synth");
     private final JLabel editedSound = new JLabel("No sound in buffer");
 
+    private final PasteAction pasteAction;
+
     private boolean isSelected;
 
     public SynthPanel(SynthModel synthModel) {
@@ -28,6 +30,8 @@ public class SynthPanel extends JPanel implements AppExtension {
         tabbedPane = new JTabbedPane();
 
         buildBankTabs();
+
+        pasteAction = new PasteAction();
     }
 
     private void buildBankTabs() {
@@ -240,37 +244,13 @@ public class SynthPanel extends JPanel implements AppExtension {
                     return;
             }
 
-            synthModel.uploadSynth(SynthModel.getOutputVariant(actionEvent.getModifiers()));
+            synthModel.uploadSynth(MidiDeviceManager.getOutputVariant(actionEvent.getModifiers()));
         }));
     }
 
     @Override
     public Action getPasteAction() {
-        return new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Clipboard clipboard = getSystemClipboard();
-                try {
-                    if (!clipboard.isDataFlavorAvailable(SoundDbTable.VIRTUAL_SYNTH_SOUND_FLAVOR)) {
-                        return;
-                    }
-                    Sound sound = (Sound) clipboard.getData(SoundDbTable.VIRTUAL_SYNTH_SOUND_FLAVOR);
-
-                    JTable selectedTab = tabTables.get(tabbedPane.getSelectedIndex());
-                    if (selectedTab instanceof SynthBankTable) {
-                        int savedSelection = selectedTab.getSelectionModel().getMinSelectionIndex();
-                        if (((SynthBankTable) selectedTab).updateSound(sound)) {
-                            selectedTab.getSelectionModel().setSelectionInterval(savedSelection, savedSelection);
-                        } else {
-                            JOptionPane.showMessageDialog(null, String.format("Attempted to paste a sound from %s to %s", sound.getSynthFactory().getSynthId(), synthModel.getSynth().getSynthFactory().getSynthId()), "Incompatible sound", JOptionPane.ERROR_MESSAGE);
-                        }
-                    }
-
-                } catch (UnsupportedFlavorException | IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        };
+        return pasteAction;
     }
 
     private class SynthPanelSoundEditorModelListener implements SoundEditorModel.SoundEditorModelListener {
@@ -301,6 +281,32 @@ public class SynthPanel extends JPanel implements AppExtension {
         @Override
         public void editedSoundCleared(Sound sound) {
             editedSound.setText("No sound in buffer");
+        }
+    }
+
+    private class PasteAction extends AbstractAction {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Clipboard clipboard = getSystemClipboard();
+            try {
+                if (!clipboard.isDataFlavorAvailable(SoundDbTable.VIRTUAL_SYNTH_SOUND_FLAVOR)) {
+                    return;
+                }
+                Sound sound = (Sound) clipboard.getData(SoundDbTable.VIRTUAL_SYNTH_SOUND_FLAVOR);
+
+                JTable selectedTab = tabTables.get(tabbedPane.getSelectedIndex());
+                if (selectedTab instanceof SynthBankTable) {
+                    int savedSelection = selectedTab.getSelectionModel().getMinSelectionIndex();
+                    if (((SynthBankTable) selectedTab).updateSound(sound)) {
+                        selectedTab.getSelectionModel().setSelectionInterval(savedSelection, savedSelection);
+                    } else {
+                        JOptionPane.showMessageDialog(null, String.format("Attempted to paste a sound from %s to %s", sound.getSynthFactory().getSynthId(), synthModel.getSynth().getSynthFactory().getSynthId()), "Incompatible sound", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+
+            } catch (UnsupportedFlavorException | IOException ex) {
+                throw new RuntimeException(ex);
+            }
         }
     }
 }

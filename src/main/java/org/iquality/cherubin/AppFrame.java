@@ -43,7 +43,7 @@ public class AppFrame extends JFrame {
         GlobalControls.makeToolBar(toolBar, this);
         add(toolBar, PAGE_START);
 
-        SequencePanel sequencePanel = new SequencePanel(new SequenceModel(appModel));
+        SequencePanel sequencePanel = new SequencePanel(new SequenceModel(appModel.getMidiServices(), appModel.getMidiDeviceManager()));
         SoundDbPanel soundDbTable = new SoundDbPanel(soundDbModel);
         SynthPanel blofeldPanel = new SynthPanel(synthModel);
 
@@ -53,6 +53,7 @@ public class AppFrame extends JFrame {
         appExtensions.add(blofeldPanel);
 
         tabbedPane = new JTabbedPane();
+
         for (AppExtension ext : appExtensions) {
             ext.initialize();
             JPanel tabPanel = new JPanel(new BorderLayout());
@@ -63,6 +64,8 @@ public class AppFrame extends JFrame {
 
             JPanel statusBar = makeStatusBar();
             ext.getStatusBarComponents().forEach(statusBar::add);
+            statusBar.add(Box.createHorizontalGlue());
+            statusBar.add(new GlobalStatusBar(appModel));
             tabPanel.add(statusBar, BorderLayout.PAGE_END);
 
             tabbedPane.add(tabPanel, ext.getExtensionName());
@@ -70,10 +73,6 @@ public class AppFrame extends JFrame {
         tabbedPane.addChangeListener(e -> notifySelected());
 
         add(tabbedPane, BorderLayout.CENTER);
-
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.add(new RoutingPanel(appModel), PAGE_START);
-        add(bottomPanel, BorderLayout.PAGE_END);
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -99,11 +98,10 @@ public class AppFrame extends JFrame {
     }
 
     private JPanel makeStatusBar() {
-        JPanel statusBar = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel statusBar = new JPanel();
+        statusBar.setLayout(new BoxLayout(statusBar, BoxLayout.X_AXIS));
         TitledBorder titled = BorderFactory.createTitledBorder("Status");
         statusBar.setBorder(titled);
-        final JLabel status = new JLabel();
-        statusBar.add(status);
         return statusBar;
     }
 
@@ -114,7 +112,6 @@ public class AppFrame extends JFrame {
             appExtensions.get(currentlySelectedExt).onSelected();
         });
     }
-
 
     private void initMenuBar() {
         JMenuBar menuBar = new JMenuBar();
@@ -255,7 +252,8 @@ public class AppFrame extends JFrame {
 
         //MidiDeviceManager midiDeviceManager = new MidiDeviceManager(systemMidiInputProvider, systemMidiOutputProvider, synthMidiInputProvider, synthMidiOutputProvider);
         MidiDeviceManager midiDeviceManager = MidiDeviceManager.create(synthMidiInputProvider, synthMidiOutputProvider);
-        AppModel appModel = new AppModel(midiDeviceManager);
+        MidiProxy proxy = new MidiProxy();
+        AppModel appModel = new AppModel(midiDeviceManager, proxy, new MidiServices());
 
 //        MidiProxy midiProxy = new MidiProxy(appModel, new MidiProxy.MidiProxyListener() {
 //            @Override

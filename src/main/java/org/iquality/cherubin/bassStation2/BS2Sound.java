@@ -58,12 +58,13 @@ public class BS2Sound extends AbstractSound implements SingleSound {
 
     @Override
     protected void patch(byte[] data, int programBank, int programNumber) {
-        data[PATCH_NUMBER_OFFSET - 1] = 0;
+        data[PATCH_NUMBER_OFFSET - 1] = 1;
         data[PATCH_NUMBER_OFFSET] = (byte) programNumber;
     }
 
     @Override
     protected void patchForEditBuffer(byte[] data) {
-        patch(data, 0, 0);
+        data[PATCH_NUMBER_OFFSET - 1] = 0;
+        data[PATCH_NUMBER_OFFSET] = 0;
     }
 }
