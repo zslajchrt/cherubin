@@ -1,14 +1,10 @@
 package org.iquality.cherubin;
 
-import javax.sound.midi.MidiDevice;
-import javax.sound.midi.MidiUnavailableException;
-import javax.sound.midi.SysexMessage;
-import javax.sound.midi.Transmitter;
+import javax.sound.midi.*;
 import javax.swing.*;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 public class SoundEditorModel {
@@ -21,6 +17,8 @@ public class SoundEditorModel {
     private Transmitter dumpTransmitter;
     private SoundDumpReceiver dumpReceiver;
     private boolean audition = true;
+
+    private final Map<MidiDevice, Receiver> auditionReceivers = new HashMap<>();
 
     public interface SoundEditorModelListener {
         void editedSoundSelected(Sound sound);
@@ -136,7 +134,7 @@ public class SoundEditorModel {
         if (!sound.isInit()) {
             // Do not update the synth's edit buffer with the initial (empty) sound
             SysexMessage sysEx = sound.cloneForEditBuffer().getSysEx();
-            midiServices.sendSound(outputDevice, sysEx);
+            midiServices.sendMessage(outputDevice, sysEx);
         }
         if (audition) {
             midiServices.probeNoteOn(outputDevice);
@@ -153,7 +151,7 @@ public class SoundEditorModel {
             return;
         }
         MidiDevice outputDevice = appModel.getOutputDevice(sound.getSynthFactory(), outputVariant);
-        midiServices.sendSound(outputDevice, sound.getSysEx());
+        midiServices.sendMessage(outputDevice, sound.getSysEx());
         MidiServices.delay();
     }
 
@@ -185,13 +183,50 @@ public class SoundEditorModel {
 
     public void setAudition(boolean flag) {
         audition = flag;
+        if (!audition) {
+            closeAuditionReceivers();
+        }
+    }
+
+    private synchronized void closeAuditionReceivers() {
+        for (Map.Entry<MidiDevice, Receiver> deviceReceiverEntry : auditionReceivers.entrySet()) {
+            try {
+                deviceReceiverEntry.getValue().close();
+            } finally {
+                deviceReceiverEntry.getKey().close();
+            }
+        }
+        auditionReceivers.clear();
     }
 
     public boolean isAudition() {
         return audition;
     }
 
+    private synchronized Receiver getAuditionReceiver(MidiDevice device) {
+        return auditionReceivers.computeIfAbsent(device, (dev) -> {
+            try {
+                dev.open();
+                return dev.getReceiver();
+            } catch (MidiUnavailableException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
     <T extends Sound> void installTableBehavior(JTable table, int soundColumn, int categoriesColumn) {
+        appModel.getMidiDeviceManager().addGlobalActivityListener(new MidiDeviceManager.MessageListener() {
+            @Override
+            public MidiMessage onMessage(MidiDeviceManager.MidiDeviceWrapper device, MidiMessage message, long timeStamp) throws Exception {
+                if (audition && editedSound != null) {
+                    MidiDevice outputDevice = appModel.getOutputDevice(editedSound.getSynthFactory());
+                    Receiver receiver = getAuditionReceiver(outputDevice);
+                    receiver.send(message, -1);
+                }
+                return message;
+            }
+        }, true);
+
         table.addMouseListener(new SoundSendingMouseAdapter<T>() {
             @Override
             protected T getValueAt(int row) {

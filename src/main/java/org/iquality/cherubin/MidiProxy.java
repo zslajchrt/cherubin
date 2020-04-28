@@ -141,14 +141,18 @@ public class MidiProxy {
         return involved;
     }
 
+    public interface MessageInterceptor {
+        MidiMessage onMessage(MidiMessage message, long timestamp) throws Exception;
+    }
+
     class CapturingReceiver implements Receiver {
 
         private final Receiver receiver;
-        private final MidiDeviceManager.MessageListener listener;
+        private final MessageInterceptor interceptor;
 
-        public CapturingReceiver(Receiver receiver, MidiDeviceManager.MessageListener listener) {
+        public CapturingReceiver(Receiver receiver, MessageInterceptor interceptor) {
             this.receiver = receiver;
-            this.listener = listener;
+            this.interceptor = interceptor;
         }
 
         @Override
@@ -157,14 +161,14 @@ public class MidiProxy {
                 return;
             }
 
-            MidiMessage alteredMessage = null;
+            MidiMessage alteredMessage;
             try {
-                alteredMessage = listener.onMessage(message, timeStamp);
+                alteredMessage = interceptor.onMessage(message, timeStamp);
             } catch (Exception e) {
                 e.printStackTrace();
                 alteredMessage = message;
             }
-            receiver.send(alteredMessage == null ? message : alteredMessage, timeStamp);
+            receiver.send(alteredMessage == null ? message : alteredMessage, -1);
         }
 
         @Override
@@ -177,12 +181,12 @@ public class MidiProxy {
 
         private final MidiDevice inDevice;
         private final MidiDevice outDevice;
-        public final MidiDeviceManager.MessageListener listener;
+        public final MessageInterceptor interceptor;
 
-        public ProxyLink(MidiDevice inDevice, MidiDevice outDevice, MidiDeviceManager.MessageListener listener) {
+        public ProxyLink(MidiDevice inDevice, MidiDevice outDevice, MessageInterceptor interceptor) {
             this.inDevice = inDevice;
             this.outDevice = outDevice;
-            this.listener = listener;
+            this.interceptor = interceptor;
         }
 
         public MidiDevice getInDevice() {
@@ -216,8 +220,8 @@ public class MidiProxy {
                 this.transmitter = in.getTransmitter();
                 this.receiver = out.getReceiver();
 
-                if (link.listener != null) {
-                    transmitter.setReceiver(new CapturingReceiver(receiver, link.listener));
+                if (link.interceptor != null) {
+                    transmitter.setReceiver(new CapturingReceiver(receiver, link.interceptor));
                 } else {
                     transmitter.setReceiver(new CapturingReceiver(receiver, (message, timeStamp) -> message));
                 }

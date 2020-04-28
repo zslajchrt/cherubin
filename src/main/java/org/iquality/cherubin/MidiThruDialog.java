@@ -10,40 +10,41 @@ import java.util.List;
 import java.util.Vector;
 import java.util.function.Consumer;
 
-public class MidiThruDialog extends JDialog {
+public class MidiThruDialog extends CommonDialog {
 
     private final ProxyLinkListModel proxyLinkListModel;
 
     public MidiThruDialog(JFrame parent, List<MidiProxy.ProxyLink> links, Consumer<List<MidiProxy.ProxyLink>> resultConsumer) {
         super(parent, "MIDI Thru Configuration", true);
+
         if (parent != null) {
             Dimension parentSize = parent.getSize();
             Point p = parent.getLocation();
             setLocation(p.x + parentSize.width / 4, p.y + parentSize.height / 4);
         }
-        JPanel messagePane = new JPanel();
-        messagePane.setLayout(new BoxLayout(messagePane, BoxLayout.Y_AXIS));
+        JPanel mainPane = new JPanel();
+        mainPane.setLayout(new BoxLayout(mainPane, BoxLayout.Y_AXIS));
 
         JLabel midiInLbl = adjust(new JLabel("MIDI In:"));
-        messagePane.add(midiInLbl);
+        mainPane.add(midiInLbl);
         JComboBox<MidiDevice> inCombo = new JComboBox<>(new Vector<>(MidiDeviceManager.getAvailableDevices(true)));
         midiInLbl.setLabelFor(inCombo);
-        messagePane.add(adjust(inCombo));
+        mainPane.add(adjust(inCombo));
 
         JLabel midiOutLbl = adjust(new JLabel("MIDI Out:"));
-        messagePane.add(midiOutLbl);
+        mainPane.add(midiOutLbl);
         JComboBox<MidiDevice> outCombo = new JComboBox<>(new Vector<>(MidiDeviceManager.getAvailableDevices(false)));
         midiOutLbl.setLabelFor(outCombo);
-        messagePane.add(adjust(outCombo));
+        mainPane.add(adjust(outCombo));
 
-        messagePane.add(adjust(new JLabel("Links:")));
+        mainPane.add(adjust(new JLabel("Links:")));
         proxyLinkListModel = new ProxyLinkListModel(links);
         JList<MidiProxy.ProxyLink> linksList = new JList<>(proxyLinkListModel);
-        messagePane.add(adjust(new JScrollPane(linksList)));
+        mainPane.add(adjust(new JScrollPane(linksList)));
 
-        messagePane.setBorder(new EmptyBorder(5, 5, 5, 5));
+        mainPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 
-        getContentPane().add(messagePane);
+        getContentPane().add(mainPane);
 
         JPanel buttonPane = new JPanel();
 
@@ -113,6 +114,9 @@ public class MidiThruDialog extends JDialog {
 
         getContentPane().add(buttonPane, BorderLayout.SOUTH);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+
+        installEscapeCloseOperation();
+
         pack();
         setVisible(true);
     }

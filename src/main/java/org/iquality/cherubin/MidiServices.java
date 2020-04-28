@@ -101,7 +101,7 @@ public class MidiServices {
         withReceiver(outputDevice, rcv -> rcv.send(probeNoteOff, -1));
     }
 
-    public void sendSound(MidiDevice outputDevice, MidiMessage message) {
+    public void sendMessage(MidiDevice outputDevice, MidiMessage message) {
         withReceiver(outputDevice, rcv -> rcv.send(Utils.printSysExDump(message), -1));
     }
 

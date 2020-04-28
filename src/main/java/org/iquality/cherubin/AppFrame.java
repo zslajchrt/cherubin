@@ -39,10 +39,6 @@ public class AppFrame extends JFrame {
 
         this.getContentPane().setPreferredSize(new Dimension(width, height));
 
-        JToolBar toolBar = new JToolBar("Global Controls");
-        GlobalControls.makeToolBar(toolBar, this);
-        add(toolBar, PAGE_START);
-
         SequencePanel sequencePanel = new SequencePanel(new SequenceModel(appModel.getMidiServices(), appModel.getMidiDeviceManager()));
         SoundDbPanel soundDbTable = new SoundDbPanel(soundDbModel);
         SynthPanel blofeldPanel = new SynthPanel(synthModel);
@@ -118,8 +114,11 @@ public class AppFrame extends JFrame {
 
         JMenu editMenu = new JMenu("Edit");
         initClipboardMenu(editMenu);
-
         menuBar.add(editMenu);
+
+        JMenu midiMenu = new JMenu("MIDI");
+        initMidiMenu(midiMenu);
+        menuBar.add(midiMenu);
 
         setJMenuBar(menuBar);
     }
@@ -173,6 +172,93 @@ public class AppFrame extends JFrame {
         addClipboardMenuAction(editMenu, new AppExtensionAction(AppExtension::getCutAction), KeyEvent.VK_X, "Cut");
         addClipboardMenuAction(editMenu, new AppExtensionAction(AppExtension::getCopyAction), KeyEvent.VK_C, "Copy");
         addClipboardMenuAction(editMenu, new AppExtensionAction(AppExtension::getPasteAction), KeyEvent.VK_V, "Paste");
+    }
+
+    private void initMidiMenu(JMenu midiMenu) {
+        AbstractAction action = new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new MidiDevicesDialog(AppFrame.this, appModel.getMidiDeviceManager());
+            }
+        };
+        //action.putValue(AbstractAction.ACCELERATOR_KEY, KeyStroke.getKeyStroke(key, InputEvent.CTRL_DOWN_MASK));
+        action.putValue(AbstractAction.NAME, "Devices...");
+        midiMenu.add(new JMenuItem(action));
+
+        action = new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                MidiProxy proxy = appModel.getProxy();
+                new MidiThruDialog(AppFrame.this, proxy.getLinks(), proxy::setLinks);
+            }
+        };
+        //action.putValue(AbstractAction.ACCELERATOR_KEY, KeyStroke.getKeyStroke(key, InputEvent.CTRL_DOWN_MASK));
+        action.putValue(AbstractAction.NAME, "Thru Config...");
+        midiMenu.add(new JMenuItem(action));
+
+        action = new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                appModel.getProxy().setThru(!appModel.getProxy().isThru());
+                ((JCheckBoxMenuItem)e.getSource()).setState(appModel.getProxy().isThru());
+            }
+        };
+        //action.putValue(AbstractAction.ACCELERATOR_KEY, KeyStroke.getKeyStroke(key, InputEvent.CTRL_DOWN_MASK));
+        action.putValue(AbstractAction.NAME, "Thru");
+        JCheckBoxMenuItem thruItem = new JCheckBoxMenuItem(action);
+        thruItem.setState(appModel.getProxy().isThru());
+        midiMenu.add(thruItem);
+
+        action = new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                appModel.getExecutor().execute(MidiServices::sendAllSoundsOff);
+            }
+        };
+        //action.putValue(AbstractAction.ACCELERATOR_KEY, KeyStroke.getKeyStroke(key, InputEvent.CTRL_DOWN_MASK));
+        action.putValue(AbstractAction.NAME, "All Notes Off");
+        midiMenu.add(new JMenuItem(action));
+
+//        midiThruBtn.addButton(new AbstractAction(THRU_ON) {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                appFrame.getAppModel().getProxy().setThru(true);
+//                midiThruBtn.setButtonEnabled(THRU_OFF, true);
+//                midiThruBtn.setButtonEnabled(THRU_ON, false);
+//            }
+//        });
+//        midiThruBtn.addButton(new AbstractAction(THRU_OFF) {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                appFrame.getAppModel().getProxy().setThru(false);
+//                midiThruBtn.setButtonEnabled(THRU_OFF, false);
+//                midiThruBtn.setButtonEnabled(THRU_ON, true);
+//            }
+//        });
+//        if (appFrame.getAppModel().getProxy().isThru()) {
+//            midiThruBtn.setButtonEnabled(THRU_OFF, true);
+//            midiThruBtn.setButtonEnabled(THRU_ON, false);
+//        }
+//
+//        midiThruBtn.addButton(new AbstractAction("Thru Config") {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                MidiProxy proxy = appFrame.getAppModel().getProxy();
+//                new MidiThruDialog((JFrame) SwingUtilities.windowForComponent(toolBar), proxy.getLinks(), proxy::setLinks);
+//            }
+//        });
+//
+//        toolBar.add(midiThruBtn);
+//
+//        toolBar.addSeparator(new Dimension(5,0));
+//
+//        toolBar.add(new JButton(new AbstractAction("All Notes Off") {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                appFrame.getAppModel().getExecutor().execute(MidiServices::sendAllSoundsOff);
+//            }
+//        }));
+
     }
 
     private AppExtension getCurrentAppExtension() {
@@ -251,7 +337,7 @@ public class AppFrame extends JFrame {
         };
 
         //MidiDeviceManager midiDeviceManager = new MidiDeviceManager(systemMidiInputProvider, systemMidiOutputProvider, synthMidiInputProvider, synthMidiOutputProvider);
-        MidiDeviceManager midiDeviceManager = MidiDeviceManager.create(synthMidiInputProvider, synthMidiOutputProvider);
+        MidiDeviceManager midiDeviceManager = MidiDeviceManager.initialize(synthMidiInputProvider, synthMidiOutputProvider);
         MidiProxy proxy = new MidiProxy();
         AppModel appModel = new AppModel(midiDeviceManager, proxy, new MidiServices());
 

@@ -193,7 +193,7 @@ public class MidiActivityPanel extends JPanel {
         }
 
         @Override
-        public MidiMessage onMessage(MidiMessage message, long timeStamp) throws Exception {
+        public MidiMessage onMessage(MidiDeviceManager.MidiDeviceWrapper device, MidiMessage message, long timeStamp) throws Exception {
             switch (message.getStatus()) {
                 case ShortMessage.TIMING_CLOCK:
                     timingActivity = true;

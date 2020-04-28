@@ -58,6 +58,10 @@ public class AppModel {
         return midiDeviceManager.getOutputDevice(outputVariant);
     }
 
+    public MidiDevice getOutputDevice(SynthFactory synthFactory) {
+        return midiDeviceManager.getOutputDevice(synthFactory);
+    }
+
     public MidiDevice getOutputDevice(SynthFactory synthFactory, int outputVariant) {
         return midiDeviceManager.getOutputDevice(synthFactory, outputVariant);
     }
