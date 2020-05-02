@@ -72,7 +72,28 @@ public class SynthModel extends SoundEditorModel {
     private final List<SynthModelListener> listeners = new ArrayList<>();
 
     public void uploadSynth(int outputVariant) {
-        synth.getBanks().forEach(bank -> bank.stream().filter(Sound::isRegular).forEach(s -> sendSoundWithDelayIgnoreEmpty(s, outputVariant)));
+        synth.getBanks().forEach(bank -> bank.stream().filter(Sound::isRegular).forEach(s -> {
+            try {
+                s.verify();
+                if (sendSoundWithDelayIgnoreEmpty(s, outputVariant)) {
+                    System.out.println("Sound " + s + " uploaded");
+                }
+            } catch (Sound.VerificationException e) {
+                e.printStackTrace();
+            }
+        }));
+
+        synth.getMulti().stream().filter(Sound::isRegular).forEach(s -> {
+            try {
+                s.verify();
+                if (sendSoundWithDelayIgnoreEmpty(s, outputVariant)) {
+                    System.out.println("Multi Sound " + s + " uploaded");
+                }
+            } catch (Sound.VerificationException e) {
+                e.printStackTrace();
+            }
+        });
+
     }
 
     public boolean exists(String name) {

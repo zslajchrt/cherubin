@@ -1,22 +1,38 @@
 package org.iquality.cherubin;
 
-import com.sun.org.apache.xpath.internal.operations.Mult;
-
 import javax.sound.midi.SysexMessage;
 import java.util.ArrayList;
 import java.util.List;
 
-public interface SynthFactory {
+public abstract class SynthFactory {
 
-    List<Sound> createSounds(SysexMessage sysexMessage, String soundSetName);
+    public abstract List<Sound> createSounds(SysexMessage sysexMessage, String soundSetName);
 
-    Sound createOneSound(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName);
+    protected abstract Sound createOneSoundInternal(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName);
 
-    SingleSound createSingleSound();
+    public final Sound createOneSound(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
+        Sound sound = createOneSoundInternal(id, name, sysexMessage, category, soundSetName);
+        sound.initialize();
+        return sound;
+    }
 
-    MultiSound createMultiSound();
+    protected abstract SingleSound createSingleSoundInternal();
 
-    default List<Sound> createBank(int bankNum) {
+    public final SingleSound createSingleSound() {
+        SingleSound sound = createSingleSoundInternal();
+        sound.initialize();
+        return sound;
+    }
+
+    protected abstract MultiSound createMultiSoundInternal();
+
+    public final MultiSound createMultiSound() {
+        MultiSound sound = createMultiSoundInternal();
+        sound.initialize();
+        return sound;
+    }
+
+    public List<Sound> createBank(int bankNum) {
         List<Sound> bankList = new ArrayList<>();
         for (int program = 0; program < getBankSize(); program++) {
             Sound clone = createSingleSound().clone(bankNum, program);
@@ -25,7 +41,7 @@ public interface SynthFactory {
         return bankList;
     }
 
-    default List<MultiSound> createMultiBank() {
+    public List<MultiSound> createMultiBank() {
         List<MultiSound> bankList = new ArrayList<>();
         for (int program = 0; program < getMultiBankSize(); program++) {
             bankList.add((MultiSound) createMultiSound().clone(0, program));
@@ -33,19 +49,19 @@ public interface SynthFactory {
         return bankList;
     }
 
-    int getBankCount();
+    public abstract int getBankCount();
 
-    int getBankSize();
+    public abstract int getBankSize();
 
-    boolean hasMultiBank();
+    public abstract boolean hasMultiBank();
 
-    int getMultiBankSize();
+    public abstract int getMultiBankSize();
 
-    String getSynthId();
+    public abstract String getSynthId();
 
-    boolean accepts(SysexMessage message);
+    public abstract boolean accepts(SysexMessage message);
 
-    boolean isMulti(SysexMessage sysex);
+    public abstract boolean isMulti(SysexMessage sysex);
 
-    int getMultiSlotCount();
+    public abstract int getMultiSlotCount();
 }

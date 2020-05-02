@@ -2,8 +2,10 @@ package org.iquality.cherubin.blofeld;
 
 import org.iquality.cherubin.*;
 
+import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -104,7 +106,6 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
         data[BANK_OFFSET] = (byte) programBank;
         data[PROGRAM_OFFSET] = (byte) programNumber;
         data[MULTI_CHECKSUM_OFFSET] = Utils.checksum(data, MULTI_NAME_OFFSET, MULTI_CHECKSUM_OFFSET);
-        //System.out.printf("Checksum is %2X\n", Utils.checksum(data, MULTI_NAME_OFFSET, MULTI_CHECKSUM_OFFSET - 1));
     }
 
     @Override
@@ -116,5 +117,15 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
     @Override
     public List<SoundSlotRef> getSlotRefs() {
         return Collections.unmodifiableList(slotRefs);
+    }
+
+    @Override
+    public void verify() throws VerificationException {
+        byte[] msg = getSysEx().getMessage();
+        byte checksum = Utils.checksum(msg, MULTI_NAME_OFFSET, MULTI_CHECKSUM_OFFSET);
+        byte currentChecksum = msg[MULTI_CHECKSUM_OFFSET];
+        if (checksum != currentChecksum) {
+            throw new VerificationException("Inconsistent checksum");
+        }
     }
 }

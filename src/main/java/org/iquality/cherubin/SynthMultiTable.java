@@ -36,9 +36,6 @@ public class SynthMultiTable extends JTable {
             }
         };
         columnModel.getColumn(SynthMultiTableModel.COLUMN_NAME).setCellRenderer(soundNameSellRenderer);
-
-        tableModel.getSynthModel().installTableBehavior(this, SynthMultiTableModel.COLUMN_NAME, -1);
-
     }
 
 }

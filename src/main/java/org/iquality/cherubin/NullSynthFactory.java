@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-public class NullSynthFactory implements SynthFactory {
+public class NullSynthFactory extends SynthFactory {
 
     public static final NullSynthFactory INSTANCE = new NullSynthFactory();
     public static final String SYNTH_ID = "NullSynth";
@@ -16,17 +16,17 @@ public class NullSynthFactory implements SynthFactory {
     }
 
     @Override
-    public Sound createOneSound(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
+    protected Sound createOneSoundInternal(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public SingleSound createSingleSound() {
+    protected SingleSound createSingleSoundInternal() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public MultiSound createMultiSound() {
+    protected MultiSound createMultiSoundInternal() {
         throw new UnsupportedOperationException();
     }
 

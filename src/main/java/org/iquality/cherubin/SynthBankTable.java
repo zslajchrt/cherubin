@@ -36,8 +36,6 @@ public class SynthBankTable extends JTable {
         };
         columnModel.getColumn(SynthTableModel.COLUMN_NAME).setCellRenderer(soundNameSellRenderer);
 
-        tableModel.getSynthModel().installTableBehavior(this, SynthTableModel.COLUMN_NAME, SynthTableModel.COLUMN_CATEGORY);
-
         KeyStroke deleteKey = KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0);
         getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(deleteKey, DELETE_SOUND);
         getActionMap().put(DELETE_SOUND, new AbstractAction() {

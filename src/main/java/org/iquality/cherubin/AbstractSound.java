@@ -23,6 +23,11 @@ public abstract class AbstractSound implements Sound {
     }
 
     @Override
+    public void initialize() {
+        repatch();
+    }
+
+    @Override
     public SynthFactory getSynthFactory() {
         return synthFactory;
     }
@@ -55,6 +60,8 @@ public abstract class AbstractSound implements Sound {
         } catch (InvalidMidiDataException e) {
             throw new RuntimeException(e);
         }
+
+        repatch();
     }
 
     protected abstract int getNameOffset();
@@ -113,7 +120,10 @@ public abstract class AbstractSound implements Sound {
 
     @Override
     public void setCategory(SoundCategory category) {
-        if (!isInit()) setCategoryImp(category);
+        if (!isInit()) {
+            setCategoryImp(category);
+            repatch();
+        }
     }
 
     protected abstract void setCategoryImp(SoundCategory category);
@@ -140,6 +150,10 @@ public abstract class AbstractSound implements Sound {
         return cloneHelper(this::patchForEditBuffer);
     }
 
+    @Override
+    public void verify() throws VerificationException {
+    }
+
     private Sound cloneHelper(Consumer<byte[]> patcher) {
         SysexMessage sysEx = getSysEx();
         byte[] data = sysEx.getMessage(); // getMessage() returns a copy
@@ -156,6 +170,20 @@ public abstract class AbstractSound implements Sound {
         }
     }
 
+    protected void repatch() {
+        if (sysEx instanceof InitSysexMessage) {
+            return;
+        }
+
+        byte[] msg = sysEx.getMessage();
+        patch(msg, getBankImp(), getProgramImp());
+        try {
+            sysEx = new SysexMessage(msg, msg.length);
+        } catch (InvalidMidiDataException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     protected abstract void patch(byte[] data, int programBank, int programNumber);
 
     protected abstract void patchForEditBuffer(byte[] data);
@@ -163,6 +191,6 @@ public abstract class AbstractSound implements Sound {
     @Override
     public String toString() {
         //return String.format("%s (%s%d)",  getName(), "" + (char)(getBank() + 'A'), (getProgram() + 1));
-        return getName();
+        return getName().trim();
     }
 }

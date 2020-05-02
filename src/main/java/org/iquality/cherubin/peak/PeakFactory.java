@@ -6,7 +6,7 @@ import javax.sound.midi.SysexMessage;
 import java.util.Collections;
 import java.util.List;
 
-public class PeakFactory implements SynthFactory {
+public class PeakFactory extends SynthFactory {
 
     public static final PeakFactory INSTANCE = new PeakFactory();
     public static final int BANKS_COUNT = 4;
@@ -19,19 +19,19 @@ public class PeakFactory implements SynthFactory {
     }
 
     @Override
-    public Sound createOneSound(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
+    protected Sound createOneSoundInternal(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
         assert accepts(sysexMessage);
         // ignore name and category as they are encoded in sysex
         return new PeakSound(id, sysexMessage, soundSetName);
     }
 
     @Override
-    public SingleSound createSingleSound() {
+    protected SingleSound createSingleSoundInternal() {
         return new PeakSound();
     }
 
     @Override
-    public MultiSound createMultiSound() {
+    protected MultiSound createMultiSoundInternal() {
         throw new UnsupportedOperationException("No multi sound in Novation Peak");
     }
 

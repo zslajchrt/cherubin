@@ -7,7 +7,7 @@ import javax.sound.midi.SysexMessage;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BS2Factory implements SynthFactory {
+public class BS2Factory extends SynthFactory {
 
     public static final int BANK_COUNT = 1;
     public static final int BANK_SIZE = 128;
@@ -47,17 +47,17 @@ public class BS2Factory implements SynthFactory {
     }
 
     @Override
-    public BS2Sound createOneSound(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
+    protected BS2Sound createOneSoundInternal(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
         return new BS2Sound(id, sysexMessage, category, soundSetName);
     }
 
     @Override
-    public SingleSound createSingleSound() {
+    protected SingleSound createSingleSoundInternal() {
         return new BS2Sound();
     }
 
     @Override
-    public MultiSound createMultiSound() {
+    protected MultiSound createMultiSoundInternal() {
         throw new UnsupportedOperationException("No multi sound in BassStation 2");
     }
 

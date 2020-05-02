@@ -4,6 +4,8 @@ import javax.sound.midi.SysexMessage;
 
 public interface Sound {
 
+    void initialize();
+
     SynthFactory getSynthFactory();
 
     int getId();
@@ -36,4 +38,11 @@ public interface Sound {
 
     Sound cloneForEditBuffer();
 
+    void verify() throws VerificationException;
+
+    class VerificationException extends Exception {
+        public VerificationException(String message) {
+            super(message);
+        }
+    }
 }

@@ -6,7 +6,7 @@ import javax.sound.midi.SysexMessage;
 import java.util.Collections;
 import java.util.List;
 
-public class BlofeldFactory implements SynthFactory {
+public class BlofeldFactory extends SynthFactory {
 
     public static final int BANKS_COUNT = 8;
     public static final int BANK_SIZE = 128;
@@ -21,7 +21,7 @@ public class BlofeldFactory implements SynthFactory {
     }
 
     @Override
-    public Sound createOneSound(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
+    protected Sound createOneSoundInternal(int id, String name, SysexMessage sysexMessage, SoundCategory category, String soundSetName) {
         assert accepts(sysexMessage);
         if (isMulti(sysexMessage)) {
             return new BlofeldMultiSound(id, sysexMessage, category, soundSetName);
@@ -32,12 +32,12 @@ public class BlofeldFactory implements SynthFactory {
     }
 
     @Override
-    public SingleSound createSingleSound() {
+    protected SingleSound createSingleSoundInternal() {
         return new BlofeldSingleSound();
     }
 
     @Override
-    public MultiSound createMultiSound() {
+    protected MultiSound createMultiSoundInternal() {
         return new BlofeldMultiSound();
     }
 

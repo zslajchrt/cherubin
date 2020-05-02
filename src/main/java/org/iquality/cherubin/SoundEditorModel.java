@@ -2,13 +2,11 @@ package org.iquality.cherubin;
 
 import javax.sound.midi.*;
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseEvent;
-import java.lang.reflect.Modifier;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
 public class SoundEditorModel {
@@ -152,13 +150,16 @@ public class SoundEditorModel {
         midiServices.probeNoteOff(outputDevice);
     }
 
-    public void sendSoundWithDelayIgnoreEmpty(Sound sound, int outputVariant) {
+    public boolean sendSoundWithDelayIgnoreEmpty(Sound sound, int outputVariant) {
         if (sound.isInit()) {
-            return;
+            return false;
         }
+
         MidiDevice outputDevice = appModel.getOutputDevice(sound.getSynthFactory(), outputVariant);
         midiServices.sendMessage(outputDevice, sound.getSysEx());
         MidiServices.delay();
+
+        return true;
     }
 
     public JCheckBox makeSoundDumpCheckBox(Supplier<Boolean> activeFlag) {
@@ -225,9 +226,9 @@ public class SoundEditorModel {
         });
     }
 
-    <T extends Sound> void installTableBehavior(JTable table, int soundColumn, int categoriesColumn) {
+    <T extends Sound> void installTableBehavior(JTable table, int soundColumn, int categoriesColumn, Supplier<Boolean> activeFlag) {
         appModel.getMidiDeviceManager().addGlobalActivityListener((device, message, timeStamp) -> {
-            if (audition && editedSound != null && device.isSystemDevice(MidiDeviceManager.SystemDeviceType.controller)) {
+            if (activeFlag.get() && audition && editedSound != null && device.isSystemDevice(MidiDeviceManager.SystemDeviceType.controller)) {
                 MidiDevice outputDevice = appModel.getOutputDevice(editedSound.getSynthFactory());
                 Receiver receiver = getAuditionReceiver(outputDevice);
                 receiver.send(message, -1);

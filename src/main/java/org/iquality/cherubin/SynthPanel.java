@@ -47,12 +47,14 @@ public class SynthPanel extends JPanel implements AppExtension {
         for (int i = 0; i < synthModel.getSynthFactory().getBankCount(); i++) {
             SynthTableModel synthBankTableModel = new SynthTableModel(synthModel, i);
             SynthBankTable synthBankTable = new SynthBankTable(synthBankTableModel);
+            synthModel.installTableBehavior(synthBankTable, SynthTableModel.COLUMN_NAME, SynthTableModel.COLUMN_CATEGORY, () -> isSelected);
             tabbedPane.add(new JScrollPane(synthBankTable), "" + (char) ('A' + i));
             tabTables.add(synthBankTable);
         }
 
         if (synthModel.getSynthFactory().hasMultiBank()) {
             SynthMultiTable synthMultiTable = new SynthMultiTable(new SynthMultiTableModel(synthModel, synthModel.getMultiBank()));
+            synthModel.installTableBehavior(synthMultiTable, SynthMultiTableModel.COLUMN_NAME, -1, () -> isSelected);
             tabbedPane.add(new JScrollPane(synthMultiTable), "Multi");
             tabTables.add(synthMultiTable);
         }
@@ -239,7 +241,6 @@ public class SynthPanel extends JPanel implements AppExtension {
 
     protected JButton makeUploadButton() {
         return AppFrame.makeButton("uploadSynth", "Uploads Virtual Synth to real Synth", "Upload", (actionEvent -> {
-            int modifiers = actionEvent.getModifiers();
             int outputVariant = MidiDeviceManager.getOutputVariant(actionEvent);
             int input = JOptionPane.showConfirmDialog(null, "Are you sure?", "Upload Virtual Synth to Real Synth", JOptionPane.YES_NO_OPTION);
             switch (input) {

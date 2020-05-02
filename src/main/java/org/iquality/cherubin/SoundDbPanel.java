@@ -37,6 +37,8 @@ public class SoundDbPanel extends JPanel implements AppExtension {
         this.editedSoundStatus = new EditedSoundStatus(soundDbModel);
 
         soundDbTable = new SoundDbTable(new SoundDbTableModel(soundDbModel));
+        soundDbModel.installTableBehavior(soundDbTable, SoundDbTableModel.COLUMN_NAME, SoundDbTableModel.COLUMN_CATEGORY, () -> isSelected);
+
         add(soundDbTable.getTableHeader(), BorderLayout.PAGE_START);
         add(soundDbTable, BorderLayout.CENTER);
 

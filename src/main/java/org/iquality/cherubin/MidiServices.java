@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 
 public class MidiServices {
 
-    private static final int DEFAULT_DELAY = 50; // just a tentative value
+    private static final int DEFAULT_DELAY = 80; // just a tentative value
 
     private final ShortMessage probeNoteOn;
     private final ShortMessage probeNoteOff;
