@@ -25,12 +25,8 @@ public final class DuplexMidiPort implements MidiDevice {
 
     @Override
     public void open() throws MidiUnavailableException {
-        if (!device1.isOpen()) {
-            device1.open();
-        }
-        if (!device2.isOpen()) {
-            device2.open();
-        }
+        device1.open();
+        device2.open();
     }
 
     @Override
@@ -44,7 +40,8 @@ public final class DuplexMidiPort implements MidiDevice {
 
     @Override
     public boolean isOpen() {
-        return device1.isOpen() && device2.isOpen();
+        assert device1.isOpen() == device2.isOpen();
+        return device1.isOpen();
     }
 
     @Override
@@ -151,5 +148,10 @@ public final class DuplexMidiPort implements MidiDevice {
     @Override
     public List<Transmitter> getTransmitters() {
         return Collections.unmodifiableList(transmitters);
+    }
+
+    @Override
+    public String toString() {
+        return device1.toString() + ", " + device2.toString();
     }
 }

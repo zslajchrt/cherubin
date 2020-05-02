@@ -114,9 +114,15 @@ public class SoundDbTableModel extends AbstractTableModel {
 
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
+        Sound sound;
         switch (columnIndex) {
+            case COLUMN_NAME:
+                sound = listSounds.get(rowIndex);
+                sound.setName((String) value);
+                soundDbModel.updateSound(sound);
+                break;
             case COLUMN_CATEGORY:
-                Sound sound = listSounds.get(rowIndex);
+                sound = listSounds.get(rowIndex);
                 sound.setCategory((SoundCategory) value);
                 soundDbModel.updateSound(sound);
                 break;

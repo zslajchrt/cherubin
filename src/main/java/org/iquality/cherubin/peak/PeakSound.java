@@ -67,6 +67,16 @@ public class PeakSound extends AbstractSound implements SingleSound {
     }
 
     @Override
+    protected int getNameOffset() {
+        return NAME_OFFSET;
+    }
+
+    @Override
+    protected int getNameMaxLength() {
+        return NAME_LENGTH;
+    }
+
+    @Override
     protected SoundCategory getCategoryImp() {
         byte[] msg = getSysEx().getMessage();
         int catId = msg[CATEGORY_OFFSET];

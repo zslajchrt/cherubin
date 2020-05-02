@@ -22,6 +22,8 @@ public class SequencePanel extends JPanel implements AppExtension {
     private final JTabbedPane tabbedPane;
     private final List<SequenceTable> tabTables = new ArrayList<>();
 
+    private final JLabel currentMidiOutLabel = new MidiOutLabel();
+
     private final CopyAction copyAction = new CopyAction();
 
     public SequencePanel(SequenceModel sequenceModel) {
@@ -84,7 +86,7 @@ public class SequencePanel extends JPanel implements AppExtension {
 
     @Override
     public List<Component> getStatusBarComponents() {
-        return Collections.emptyList();
+        return Collections.singletonList(currentMidiOutLabel);
     }
 
     protected JButton makeLoadButton() {
@@ -243,4 +245,26 @@ public class SequencePanel extends JPanel implements AppExtension {
                 }, null);
         }
     }
+
+    private static class MidiOutLabel extends JLabel {
+        {
+            KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new ShiftKeyDispatcher() {
+                @Override
+                protected void onShiftPressed(KeyEvent e) {
+                    MidiDevice outputDevice = MidiDeviceManager.INSTANCE.getOutputDevice(MidiDeviceManager.getOutputVariant(e));
+                    setText("" + outputDevice);
+                }
+
+                @Override
+                protected void onShiftReleased(KeyEvent e) {
+                    setText("");
+                }
+            });
+        }
+
+        public MidiOutLabel() {
+            super("");
+        }
+    }
+
 }

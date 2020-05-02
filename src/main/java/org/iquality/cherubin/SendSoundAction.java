@@ -26,7 +26,7 @@ public abstract class SendSoundAction extends AbstractAction {
 
         if (sounding == null || selectedSound != sounding) {
             sounding = selectedSound;
-            outputVariant = MidiDeviceManager.getOutputVariant(e.getModifiers());
+            outputVariant = MidiDeviceManager.getOutputVariant(e);
             onSound(sounding, outputVariant, true);
         } else {
             onSound(sounding, outputVariant, false);

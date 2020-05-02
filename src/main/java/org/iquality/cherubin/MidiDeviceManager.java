@@ -3,7 +3,11 @@ package org.iquality.cherubin;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
 
 import javax.sound.midi.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.security.Key;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -72,7 +76,18 @@ public class MidiDeviceManager {
     }
 
     private static Function<Integer, MidiDevice> createSystemDeviceProvider(List<MidiDevice> devices) {
-        return (alt) -> createMultiplexDeviceSupplier(devices).get();
+        MidiDevice multiplexDevice = createMultiplexDeviceSupplier(devices).get();
+        return (alt) -> {
+            if (alt == 0) {
+                return multiplexDevice;
+            } else {
+                if ((alt - 1) < devices.size()) {
+                    return devices.get(alt - 1);
+                } else {
+                    return NullMidiPort.INSTANCE;
+                }
+            }
+        };
     }
 
     public static List<MidiDevice> getInitialDevices(SystemDeviceType deviceType) {
@@ -134,12 +149,39 @@ public class MidiDeviceManager {
         return getAllDevices().stream().filter(device -> isOfDirection(device, midiIn)).collect(Collectors.toList());
     }
 
-    public static int getOutputVariant(int keyModifiers) {
+    public static int getOutputVariant(MouseEvent event) {
+        int keyModifiers = event.getModifiersEx();
         if ((keyModifiers & (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) == (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) {
             return 3;
         } else if ((keyModifiers & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK) {
             return 1;
         } else if ((keyModifiers & InputEvent.ALT_DOWN_MASK) == InputEvent.ALT_DOWN_MASK) {
+            return 2;
+        } else {
+            return 0;
+        }
+    }
+
+    public static int getOutputVariant(ActionEvent event) {
+        int keyModifiers = event.getModifiers();
+        if ((keyModifiers & (ActionEvent.CTRL_MASK | ActionEvent.ALT_MASK)) == (ActionEvent.CTRL_MASK | ActionEvent.ALT_MASK)) {
+            return 3;
+        } else if ((keyModifiers & ActionEvent.CTRL_MASK) == ActionEvent.CTRL_MASK) {
+            return 1;
+        } else if ((keyModifiers & ActionEvent.ALT_MASK) == ActionEvent.ALT_MASK) {
+            return 2;
+        } else {
+            return 0;
+        }
+    }
+
+    public static int getOutputVariant(KeyEvent event) {
+        int keyModifiers = event.getModifiers();
+        if ((keyModifiers & (KeyEvent.CTRL_MASK | KeyEvent.ALT_MASK)) == (KeyEvent.CTRL_MASK | KeyEvent.ALT_MASK)) {
+            return 3;
+        } else if ((keyModifiers & KeyEvent.CTRL_MASK) == KeyEvent.CTRL_MASK) {
+            return 1;
+        } else if ((keyModifiers & KeyEvent.ALT_MASK) == KeyEvent.ALT_MASK) {
             return 2;
         } else {
             return 0;
@@ -216,16 +258,20 @@ public class MidiDeviceManager {
     }
 
     public static void broadcast(Consumer<MidiDevice> action) {
-        for (MidiDevice.Info deviceInfo : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
-            try {
-                MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
-                if (device.getMaxReceivers() != 0) {
+        List<MidiDevice> allOutDevices = getAvailableDevices(false);
+        for (MidiDevice device : allOutDevices) {
+            new Thread(() -> {
+                try {
                     device.open();
-                    new Thread(() -> action.accept(device)).start();
+                } catch (MidiUnavailableException e) {
+                    throw new RuntimeException(e);
                 }
-            } catch (MidiUnavailableException e) {
-                e.printStackTrace();
-            }
+                try {
+                    action.accept(device);
+                } finally {
+                    device.close();
+                }
+            }).start();
         }
     }
 
@@ -463,7 +509,7 @@ public class MidiDeviceManager {
         public long getMicrosecondPosition() {
             return midiDevice.getMicrosecondPosition();
         }
-        
+
         @Override
         public int getMaxReceivers() {
             return midiDevice.getMaxReceivers();
@@ -517,7 +563,7 @@ public class MidiDeviceManager {
                     listener.onMessage(this, message, timeStamp);
                 } catch (Exception e) {
                     System.err.println("Error in device " + this);
-                    e.printStackTrace();
+                    throw new RuntimeException(String.format("Error in device %s: %s", this, e.getMessage()), e);
                 }
             }
 

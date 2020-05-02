@@ -12,7 +12,11 @@ public interface Sound {
 
     String getName();
 
+    void setName(String name);
+
     SoundCategory getCategory();
+
+    void setCategory(SoundCategory value);
 
     SysexMessage getSysEx();
 
@@ -32,5 +36,4 @@ public interface Sound {
 
     Sound cloneForEditBuffer();
 
-    void setCategory(SoundCategory value);
 }

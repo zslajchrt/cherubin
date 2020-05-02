@@ -15,7 +15,7 @@ public class SoundDbTable extends JTable {
 
         tableModel = (SoundDbTableModel) getModel();
 
-        soundDbTableModel.getSoundDbModel().installTableBehavior(this, SoundDbTableModel.COLUMN_NAME, SoundDbTableModel.COLUMN_NAME);
+        soundDbTableModel.getSoundDbModel().installTableBehavior(this, SoundDbTableModel.COLUMN_NAME, SoundDbTableModel.COLUMN_CATEGORY);
 
         TableColumnModel columnModel = getColumnModel();
         columnModel.getColumn(SoundDbTableModel.COLUMN_ID).setPreferredWidth(15);

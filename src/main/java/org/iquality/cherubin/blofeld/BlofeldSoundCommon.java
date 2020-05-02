@@ -9,12 +9,14 @@ public interface BlofeldSoundCommon extends Sound {
     int PROGRAM_OFFSET = 6;
     int SDATA_OFFSET = 7;
     int SDATA_LENGTH = 380;
-    int SINGLE_NAME_OFFSET = 363;
+    int SINGLE_NAME_OFFSET = SDATA_OFFSET + 363;
     int NAME_LENGTH = 16;
-    int SINGLE_CAT_OFFSET = 379;
+    int SINGLE_CAT_OFFSET = SDATA_OFFSET + 379;
+    int SINGLE_CHECKSUM_OFFSET = 390;
     int MULTI_NAME_OFFSET = SDATA_OFFSET;
     int MULTI_SLOTS_OFFSET = MULTI_NAME_OFFSET + 32;
     int MULTI_SLOT_LENGTH = 24;
+    int MULTI_CHECKSUM_OFFSET = 0x1a7;
 
     byte SINGLE_DUMP = 0x10;
     byte MULTI_DUMP = 0x11;

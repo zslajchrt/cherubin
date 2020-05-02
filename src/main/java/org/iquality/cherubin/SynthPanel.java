@@ -18,7 +18,7 @@ public class SynthPanel extends JPanel implements AppExtension {
     private final SynthPanelSoundEditorModelListener editorModelListener = new SynthPanelSoundEditorModelListener();
 
     private final JLabel synthInfo = new JLabel("No synth");
-    private final JLabel editedSound = new JLabel("No sound in buffer");
+    private final EditedSoundStatus editedSoundStatus;
 
     private final PasteAction pasteAction;
 
@@ -27,6 +27,9 @@ public class SynthPanel extends JPanel implements AppExtension {
     public SynthPanel(SynthModel synthModel) {
         super(new BorderLayout());
         this.synthModel = synthModel;
+
+        this.editedSoundStatus = new EditedSoundStatus(synthModel);
+
         tabbedPane = new JTabbedPane();
 
         buildBankTabs();
@@ -133,7 +136,7 @@ public class SynthPanel extends JPanel implements AppExtension {
     public List<Component> getStatusBarComponents() {
         List<Component> components = new ArrayList<>();
         components.add(synthInfo);
-        components.add(editedSound);
+        components.add(editedSoundStatus);
         return components;
     }
 
@@ -236,6 +239,8 @@ public class SynthPanel extends JPanel implements AppExtension {
 
     protected JButton makeUploadButton() {
         return AppFrame.makeButton("uploadSynth", "Uploads Virtual Synth to real Synth", "Upload", (actionEvent -> {
+            int modifiers = actionEvent.getModifiers();
+            int outputVariant = MidiDeviceManager.getOutputVariant(actionEvent);
             int input = JOptionPane.showConfirmDialog(null, "Are you sure?", "Upload Virtual Synth to Real Synth", JOptionPane.YES_NO_OPTION);
             switch (input) {
                 case 0: // YES
@@ -244,7 +249,7 @@ public class SynthPanel extends JPanel implements AppExtension {
                     return;
             }
 
-            synthModel.uploadSynth(MidiDeviceManager.getOutputVariant(actionEvent.getModifiers()));
+            synthModel.uploadSynth(outputVariant);
         }));
     }
 
@@ -256,12 +261,10 @@ public class SynthPanel extends JPanel implements AppExtension {
     private class SynthPanelSoundEditorModelListener implements SoundEditorModel.SoundEditorModelListener {
         @Override
         public void editedSoundSelected(Sound sound) {
-            editedSound.setText("" + sound);
         }
 
         @Override
         public void editedSoundUpdated(Sound sound) {
-            editedSound.setText("" + sound + "*");
             tabTables.forEach(jTable -> ((AbstractTableModel) jTable.getModel()).fireTableDataChanged());
 
             int[] tabAndRow = new int[2];
@@ -280,7 +283,6 @@ public class SynthPanel extends JPanel implements AppExtension {
 
         @Override
         public void editedSoundCleared(Sound sound) {
-            editedSound.setText("No sound in buffer");
         }
     }
 

@@ -5,7 +5,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 
 public class MidiActivityPanel extends JPanel {
 
@@ -41,7 +40,7 @@ public class MidiActivityPanel extends JPanel {
         new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(80);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                 }
                 checkActivity(inSlots);
@@ -203,8 +202,8 @@ public class MidiActivityPanel extends JPanel {
                     break;
                 default:
                     otherActivity = true;
+                    checkActivity();
             }
-
             return message;
         }
     }

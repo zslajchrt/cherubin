@@ -36,6 +36,16 @@ public class BS2Sound extends AbstractSound implements SingleSound {
     }
 
     @Override
+    protected int getNameOffset() {
+        return NAME_OFFSET;
+    }
+
+    @Override
+    protected int getNameMaxLength() {
+        return NAME_LENGTH;
+    }
+
+    @Override
     protected SoundCategory getCategoryImp() {
         return category;
     }

@@ -4,6 +4,7 @@ import org.iquality.cherubin.blofeld.InitSysexMessage;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 public abstract class AbstractSound implements Sound {
@@ -37,6 +38,28 @@ public abstract class AbstractSound implements Sound {
     }
 
     protected abstract String getNameImp();
+
+    @Override
+    public void setName(String name) {
+        int nameOffset = getNameOffset();
+        int nameMaxLength = getNameMaxLength();
+        if (nameOffset < 0 || nameMaxLength <= 0) {
+            return;
+        }
+
+        byte[] msg = getSysEx().getMessage();
+        Arrays.fill(msg, nameOffset, nameOffset + nameMaxLength, (byte) 0x20);
+        System.arraycopy(name.getBytes(), 0, msg, nameOffset, Math.min(name.length(), nameMaxLength));
+        try {
+            sysEx = new SysexMessage(msg, msg.length);
+        } catch (InvalidMidiDataException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected abstract int getNameOffset();
+
+    protected abstract int getNameMaxLength();
 
     @Override
     public void setSysEx(SysexMessage sysEx) {
@@ -139,6 +162,7 @@ public abstract class AbstractSound implements Sound {
 
     @Override
     public String toString() {
-        return String.format("%s (%s%d)",  getName(), "" + (char)(getBank() + 'A'), (getProgram() + 1));
+        //return String.format("%s (%s%d)",  getName(), "" + (char)(getBank() + 'A'), (getProgram() + 1));
+        return getName();
     }
 }

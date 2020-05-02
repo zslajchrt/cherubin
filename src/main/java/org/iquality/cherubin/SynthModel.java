@@ -83,7 +83,16 @@ public class SynthModel extends SoundEditorModel {
         return soundDbModel.getSynthModels();
     }
 
-    public void updateSound(SingleSound sound) {
+    public void updateSound(Sound sound) {
+        if (sound instanceof SingleSound) {
+            updateSingleSound((SingleSound) sound);
+        } else {
+            assert sound instanceof MultiSound;
+            updateMultiSound((MultiSound) sound);
+        }
+    }
+
+    public void updateSingleSound(SingleSound sound) {
         soundDbModel.updateBankSound(sound);
     }
 

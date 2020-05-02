@@ -2,7 +2,11 @@ package org.iquality.cherubin;
 
 import javax.sound.midi.*;
 import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -79,12 +83,12 @@ public class SoundEditorModel {
         fireEditedSoundCleared(cleared);
     }
 
-    public void startListeningToDump(Supplier<Boolean> activeFlag) {
+    public MidiDevice startListeningToDump(Supplier<Boolean> activeFlag, int inputVariant) {
         if (editedSound == null) {
-            return;
+            return null;
         }
         try {
-            dumpInputDevice = appModel.getInputDevice(editedSound.getSynthFactory(), 0);
+            dumpInputDevice = appModel.getInputDevice(editedSound.getSynthFactory(), inputVariant);
             dumpInputDevice.open();
             dumpTransmitter = dumpInputDevice.getTransmitter();
             dumpReceiver = new SoundDumpReceiver() {
@@ -105,6 +109,8 @@ public class SoundEditorModel {
                 }
             };
             dumpTransmitter.setReceiver(dumpReceiver);
+
+            return dumpInputDevice;
         } catch (MidiUnavailableException e) {
             throw new RuntimeException(e);
         }
@@ -164,11 +170,16 @@ public class SoundEditorModel {
                     ch.setSelected(false);
                     return;
                 }
-                startListeningToDump(activeFlag);
+                MidiDevice dumpInDevice = startListeningToDump(activeFlag, MidiDeviceManager.getOutputVariant(e));
+                if (dumpInDevice != null) {
+                    ch.setToolTipText("Listening to " + dumpInDevice);
+                }
             } else {
                 stopListeningToDump();
+                ch.setToolTipText("Inactive");
             }
         });
+        ch.setToolTipText("Inactive");
         return ch;
     }
 
@@ -215,16 +226,13 @@ public class SoundEditorModel {
     }
 
     <T extends Sound> void installTableBehavior(JTable table, int soundColumn, int categoriesColumn) {
-        appModel.getMidiDeviceManager().addGlobalActivityListener(new MidiDeviceManager.MessageListener() {
-            @Override
-            public MidiMessage onMessage(MidiDeviceManager.MidiDeviceWrapper device, MidiMessage message, long timeStamp) throws Exception {
-                if (audition && editedSound != null) {
-                    MidiDevice outputDevice = appModel.getOutputDevice(editedSound.getSynthFactory());
-                    Receiver receiver = getAuditionReceiver(outputDevice);
-                    receiver.send(message, -1);
-                }
-                return message;
+        appModel.getMidiDeviceManager().addGlobalActivityListener((device, message, timeStamp) -> {
+            if (audition && editedSound != null && device.isSystemDevice(MidiDeviceManager.SystemDeviceType.controller)) {
+                MidiDevice outputDevice = appModel.getOutputDevice(editedSound.getSynthFactory());
+                Receiver receiver = getAuditionReceiver(outputDevice);
+                receiver.send(message, -1);
             }
+            return message;
         }, true);
 
         table.addMouseListener(new SoundSendingMouseAdapter<T>() {
@@ -266,9 +274,11 @@ public class SoundEditorModel {
 
         table.setColumnSelectionAllowed(true);
 
+        table.getColumnModel().getColumn(soundColumn).setCellEditor(new DefaultCellEditor(new JTextField()));
+
         if (categoriesColumn >= 0) {
             JComboBox<SoundCategory> categoryComboBox = new JComboBox<>(SoundCategory.values());
-            table.getColumnModel().getColumn(SoundDbTableModel.COLUMN_CATEGORY).setCellEditor(new DefaultCellEditor(categoryComboBox));
+            table.getColumnModel().getColumn(categoriesColumn).setCellEditor(new DefaultCellEditor(categoryComboBox));
         }
     }
 

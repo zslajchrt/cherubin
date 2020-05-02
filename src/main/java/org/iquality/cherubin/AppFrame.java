@@ -32,6 +32,8 @@ public class AppFrame extends JFrame {
     private final JTabbedPane tabbedPane;
 
     private int currentlySelectedExt;
+    private final JPanel statusBar;
+    private final JPanel extStatusBar;
 
     public AppFrame(AppModel appModel, SoundDbModel soundDbModel, SynthModel synthModel, int width, int height) throws HeadlessException {
         super("Cherubin - Midi Librarian");
@@ -57,18 +59,18 @@ public class AppFrame extends JFrame {
             ext.getToolBarComponents().forEach(extToolBar::add);
             tabPanel.add(extToolBar, PAGE_START);
             tabPanel.add(ext.getMainPanel(), BorderLayout.CENTER);
-
-            JPanel statusBar = makeStatusBar();
-            ext.getStatusBarComponents().forEach(statusBar::add);
-            statusBar.add(Box.createHorizontalGlue());
-            statusBar.add(new GlobalStatusBar(appModel));
-            tabPanel.add(statusBar, BorderLayout.PAGE_END);
-
             tabbedPane.add(tabPanel, ext.getExtensionName());
         }
         tabbedPane.addChangeListener(e -> notifySelected());
 
         add(tabbedPane, BorderLayout.CENTER);
+
+        statusBar = makeStatusBar();
+        extStatusBar = new JPanel(new BorderLayout());
+        statusBar.add(extStatusBar);
+        statusBar.add(Box.createHorizontalGlue());
+        statusBar.add(new GlobalStatusBar(appModel));
+        add(statusBar, BorderLayout.PAGE_END);
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -89,6 +91,17 @@ public class AppFrame extends JFrame {
         notifySelected();
     }
 
+    /**
+     * Update the status bar by the context extension's components.
+     */
+    private void updateStatusBar() {
+        extStatusBar.removeAll();
+        AppExtension appExtension = appExtensions.get(tabbedPane.getSelectedIndex());
+        appExtension.getStatusBarComponents().forEach(extStatusBar::add);
+        extStatusBar.revalidate();
+        extStatusBar.repaint();
+    }
+
     public AppModel getAppModel() {
         return appModel;
     }
@@ -102,11 +115,10 @@ public class AppFrame extends JFrame {
     }
 
     private void notifySelected() {
-        SwingUtilities.invokeLater(() -> {
-            appExtensions.get(currentlySelectedExt).onDeselected();
-            currentlySelectedExt = tabbedPane.getSelectedIndex();
-            appExtensions.get(currentlySelectedExt).onSelected();
-        });
+        appExtensions.get(currentlySelectedExt).onDeselected();
+        currentlySelectedExt = tabbedPane.getSelectedIndex();
+        appExtensions.get(currentlySelectedExt).onSelected();
+        updateStatusBar();
     }
 
     private void initMenuBar() {
@@ -200,7 +212,7 @@ public class AppFrame extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 appModel.getProxy().setThru(!appModel.getProxy().isThru());
-                ((JCheckBoxMenuItem)e.getSource()).setState(appModel.getProxy().isThru());
+                ((JCheckBoxMenuItem) e.getSource()).setState(appModel.getProxy().isThru());
             }
         };
         //action.putValue(AbstractAction.ACCELERATOR_KEY, KeyStroke.getKeyStroke(key, InputEvent.CTRL_DOWN_MASK));
@@ -218,46 +230,6 @@ public class AppFrame extends JFrame {
         //action.putValue(AbstractAction.ACCELERATOR_KEY, KeyStroke.getKeyStroke(key, InputEvent.CTRL_DOWN_MASK));
         action.putValue(AbstractAction.NAME, "All Notes Off");
         midiMenu.add(new JMenuItem(action));
-
-//        midiThruBtn.addButton(new AbstractAction(THRU_ON) {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                appFrame.getAppModel().getProxy().setThru(true);
-//                midiThruBtn.setButtonEnabled(THRU_OFF, true);
-//                midiThruBtn.setButtonEnabled(THRU_ON, false);
-//            }
-//        });
-//        midiThruBtn.addButton(new AbstractAction(THRU_OFF) {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                appFrame.getAppModel().getProxy().setThru(false);
-//                midiThruBtn.setButtonEnabled(THRU_OFF, false);
-//                midiThruBtn.setButtonEnabled(THRU_ON, true);
-//            }
-//        });
-//        if (appFrame.getAppModel().getProxy().isThru()) {
-//            midiThruBtn.setButtonEnabled(THRU_OFF, true);
-//            midiThruBtn.setButtonEnabled(THRU_ON, false);
-//        }
-//
-//        midiThruBtn.addButton(new AbstractAction("Thru Config") {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                MidiProxy proxy = appFrame.getAppModel().getProxy();
-//                new MidiThruDialog((JFrame) SwingUtilities.windowForComponent(toolBar), proxy.getLinks(), proxy::setLinks);
-//            }
-//        });
-//
-//        toolBar.add(midiThruBtn);
-//
-//        toolBar.addSeparator(new Dimension(5,0));
-//
-//        toolBar.add(new JButton(new AbstractAction("All Notes Off") {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                appFrame.getAppModel().getExecutor().execute(MidiServices::sendAllSoundsOff);
-//            }
-//        }));
 
     }
 
@@ -284,20 +256,6 @@ public class AppFrame extends JFrame {
 
     public static void main(String[] args) throws Exception {
 
-        //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("Avid 003 Rack Port 1", true);
-        //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("VirtualMIDICable1", true);
-        //Supplier<MidiDevice> leftIn = () -> MidiPortCommunicator.findDevice("Bass Station", true);
-        //Supplier<MidiDevice> leftOut = () -> MidiPortCommunicator.findDevice("VirtualMIDICable2", false);
-        //Supplier<MidiDevice> rightIn = () -> MidiPortCommunicator.findDevice("Blofeld", true);
-        //Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Blofeld", false);
-        //Supplier<MidiDevice> rightIn = NullMidiPort::new;
-        //Supplier<MidiDevice> rightOut = NullMidiPort::new;
-        //Supplier<MidiDevice> rightOut = () -> MidiPortCommunicator.findDevice("Bass Station", false);
-
-        MidiDevice systemIn = MidiDeviceManager.findDevice("Avid 003 Rack Port 1", true);
-        MidiDevice systemOut = MidiDeviceManager.findDevice("VirtualMIDICable2", false);
-        //MidiDevice systemOut = MidiPortCommunicator.findDevice("Peak", false);
-
         MidiDevice blofeldIn = MidiDeviceManager.findDevice("Blofeld", true);
         MidiDevice blofeldOut = MidiDeviceManager.findDevice("Blofeld", false);
 
@@ -307,14 +265,14 @@ public class AppFrame extends JFrame {
         MidiDevice peakIn = MidiDeviceManager.findDevice("Peak", true);
         MidiDevice peakOut = MidiDeviceManager.findDevice("Peak", false);
 
-//        Function<Integer, MidiDevice> systemMidiInputProvider = (inputVariant) -> systemIn;
-//        Function<Integer, MidiDevice> systemMidiOutputProvider = (outputVariant) -> systemOut;
-
-        MidiDeviceManager.DuplexDeviceProvider blofeldProviderOut = new MidiDeviceManager.DuplexDeviceProvider(() -> blofeldOut, () -> systemOut);
+        MidiDevice loopIn = MidiDeviceManager.findDevice("VirtualMIDICable1", true);
+        MidiDevice loopOut = MidiDeviceManager.findDevice("VirtualMIDICable2", false);
+        MidiDeviceManager.DuplexDeviceProvider blofeldProviderOut = new MidiDeviceManager.DuplexDeviceProvider(() -> blofeldOut, () -> loopOut);
+        MidiDeviceManager.DuplexDeviceProvider blofeldProviderIn = new MidiDeviceManager.DuplexDeviceProvider(() -> blofeldIn, () -> loopIn);
 
         Function<SynthFactory, Function<Integer, MidiDevice>> synthMidiInputProvider = (synthFactory) -> {
             if (synthFactory == BlofeldFactory.INSTANCE) {
-                return (inputVariant) -> blofeldIn;
+                return blofeldProviderIn;
             } else if (synthFactory == BS2Factory.INSTANCE) {
                 return (inputVariant) -> bassStationIn;
             } else if (synthFactory == PeakFactory.INSTANCE) {
@@ -336,41 +294,9 @@ public class AppFrame extends JFrame {
             }
         };
 
-        //MidiDeviceManager midiDeviceManager = new MidiDeviceManager(systemMidiInputProvider, systemMidiOutputProvider, synthMidiInputProvider, synthMidiOutputProvider);
         MidiDeviceManager midiDeviceManager = MidiDeviceManager.initialize(synthMidiInputProvider, synthMidiOutputProvider);
         MidiProxy proxy = new MidiProxy();
         AppModel appModel = new AppModel(midiDeviceManager, proxy, new MidiServices());
-
-//        MidiProxy midiProxy = new MidiProxy(appModel, new MidiProxy.MidiProxyListener() {
-//            @Override
-//            public MidiMessage onMessage(MidiMessage message, long timeStamp, MidiProxy.Direction direction) {
-//                return message;
-//            }
-//        });
-//
-//        MidiDevice midiDevice = leftIn.get();
-//        midiDevice.open();
-//        midiDevice.getTransmitter().setReceiver(new Receiver() {
-//            @Override
-//            public void send(MidiMessage message, long timeStamp) {
-//                if (message instanceof SysexMessage) {
-//                    File f = new File("blofeld-init-multi.syx");
-//                    try (FileOutputStream fileOutputStream = new FileOutputStream(f)) {
-//                        fileOutputStream.write(message.getMessage());
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//            }
-//
-//            @Override
-//            public void close() {
-//
-//            }
-//        });
-//
-//        System.in.read();
-//        midiDevice.open();
 
         Connection con = DriverManager.getConnection("jdbc:h2:/Users/zslajchrt/Music/Waldorf/Blofeld/Cherubin/allsounds;IFEXISTS=TRUE", "zbynek", "Ovation1");
         SoundDbModel soundDbModel = new SoundDbModel(appModel, con);

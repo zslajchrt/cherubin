@@ -22,7 +22,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
     private final SoundDbModel soundDbModel;
     private final SoundDbTable soundDbTable;
-    private final JLabel editedSound = new JLabel("No sound in buffer");
+    private final EditedSoundStatus editedSoundStatus;
 
     private boolean isSelected;
 
@@ -34,6 +34,8 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
         this.soundDbModel = soundDbModel;
 
+        this.editedSoundStatus = new EditedSoundStatus(soundDbModel);
+
         soundDbTable = new SoundDbTable(new SoundDbTableModel(soundDbModel));
         add(soundDbTable.getTableHeader(), BorderLayout.PAGE_START);
         add(soundDbTable, BorderLayout.CENTER);
@@ -41,12 +43,10 @@ public class SoundDbPanel extends JPanel implements AppExtension {
         soundDbModel.addSoundEditorModelListener(new SoundEditorModel.SoundEditorModelListener() {
             @Override
             public void editedSoundSelected(Sound sound) {
-                editedSound.setText("" + sound);
             }
 
             @Override
             public void editedSoundUpdated(Sound sound) {
-                editedSound.setText("" + sound + "*");
                 soundDbTable.tableModel.fireTableDataChanged();
                 int soundRow = findSoundInTable(sound);
                 if (soundRow >= 0) {
@@ -58,7 +58,6 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
             @Override
             public void editedSoundCleared(Sound sound) {
-                editedSound.setText("No sound in buffer");
             }
         });
 
@@ -123,7 +122,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
     @Override
     public List<Component> getStatusBarComponents() {
         List<Component> components = new ArrayList<>();
-        components.add(editedSound);
+        components.add(editedSoundStatus);
         return components;
     }
 

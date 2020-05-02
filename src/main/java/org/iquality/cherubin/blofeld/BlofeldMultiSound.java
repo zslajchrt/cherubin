@@ -57,7 +57,7 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
     public BlofeldMultiSound(int id, SysexMessage sysEx, SoundCategory category, String soundSetName) {
         super(id, sysEx, soundSetName, BlofeldFactory.INSTANCE);
         this.category = category;
-        for (int i = 0; i < 16; i++ ) {
+        for (int i = 0; i < 16; i++) {
             slotRefs.add(new BlofeldSoundSlotRef(i));
         }
     }
@@ -66,6 +66,16 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
     protected String getNameImp() {
         byte[] msg = getSysEx().getMessage();
         return new String(msg, MULTI_NAME_OFFSET, NAME_LENGTH);
+    }
+
+    @Override
+    protected int getNameOffset() {
+        return MULTI_NAME_OFFSET;
+    }
+
+    @Override
+    protected int getNameMaxLength() {
+        return NAME_LENGTH;
     }
 
     @Override
@@ -80,7 +90,7 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
 
     @Override
     protected int getBankImp() {
-        return 0;
+        return 0; // there is no bank for multi
     }
 
     @Override
@@ -91,13 +101,16 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
 
     @Override
     protected void patch(byte[] data, int programBank, int programNumber) {
-        data[BANK_OFFSET] = 0; // there is no bank for multi
+        data[BANK_OFFSET] = (byte) programBank;
         data[PROGRAM_OFFSET] = (byte) programNumber;
+        data[MULTI_CHECKSUM_OFFSET] = Utils.checksum(data, MULTI_NAME_OFFSET, MULTI_CHECKSUM_OFFSET);
+        //System.out.printf("Checksum is %2X\n", Utils.checksum(data, MULTI_NAME_OFFSET, MULTI_CHECKSUM_OFFSET - 1));
     }
 
     @Override
     protected void patchForEditBuffer(byte[] data) {
-        patch(data, 0x7F, 0x00);
+        //patch(data, 0x7F, 0x00);
+        patch(data, 0x7f, 0x00);
     }
 
     @Override

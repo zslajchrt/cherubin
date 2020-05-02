@@ -1,14 +1,18 @@
 
 Missing features:
-2. Default MIDI input/output settings
-5. Show actual MIDI Input/Output for key modifiers being pressed
-6. Labels for filter combos
-7. Store MIDI files to DB
-9. Dump request
-10. A popup in SoundDb a VirtualSynth tables to display SysEx, send etc...
+* (!) Setting sound names in tables
+* Show sound names in multi slots
+* (!) Handle dump requests
+* Default MIDI input/output settings
+* Store MIDI files to DB
+* A popup in SoundDb a VirtualSynth tables to display SysEx, send etc...
+* MIDI Router
 
 Features:
-1. Monitor checkbox
-3. Proxy
-4. Panic button, All notes off
-8. MIDI traffic indicators for all inputs/outputs (horizontal LEDs in the status bar)
+* Audio monitoring
+* Monitor checkbox
+* Proxy
+* Panic button, All notes off
+* MIDI traffic indicators for all inputs/outputs (horizontal LEDs in the status bar)
+* (!) Show actual MIDI Input/Output for key modifiers being pressed
+	* Also do it for "Listen to dump" (by a tooltip)

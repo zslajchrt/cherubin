@@ -115,4 +115,9 @@ public final class NullMidiPort implements MidiDevice {
     public List<Transmitter> getTransmitters() {
         return Collections.unmodifiableList(transmitters);
     }
+
+    @Override
+    public String toString() {
+        return "No port";
+    }
 }

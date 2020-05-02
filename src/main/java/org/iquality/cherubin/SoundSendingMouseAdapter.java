@@ -21,7 +21,7 @@ public abstract class SoundSendingMouseAdapter<T> extends MouseAdapter {
             JTable target = (JTable) e.getSource();
             int row = target.getSelectedRow();
             this.sound = getValueAt(row);
-            outputVariant = MidiDeviceManager.getOutputVariant(e.getModifiersEx());
+            outputVariant = MidiDeviceManager.getOutputVariant(e);
 
             sendSoundOn(sound, outputVariant);
         }

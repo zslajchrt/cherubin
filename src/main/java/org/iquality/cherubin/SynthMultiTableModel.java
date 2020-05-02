@@ -91,32 +91,31 @@ public class SynthMultiTableModel extends AbstractTableModel {
 
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
-        if (columnIndex < multiSlotCount && columnIndex >= 0) {
+        if (columnIndex == COLUMN_NAME) {
+            MultiSound sound = soundBank.get(rowIndex);
+            sound.setName((String) value);
+        } else {
+            int slotIdx = columnIndex - 2;
+            if (slotIdx < multiSlotCount && slotIdx >= 0) {
 
-            String refStr = value.toString();
-            boolean isValid = refStr.length() >= 2 && Character.isLetter(refStr.charAt(0));
-            if (isValid) {
-                try {
-                    int program = Integer.parseInt(refStr.substring(1)) - 1;
-                    int bank = refStr.charAt(0) - 'A';
+                String refStr = value.toString();
+                boolean isValid = refStr.length() >= 2 && Character.isLetter(refStr.charAt(0));
+                if (isValid) {
+                    try {
+                        int program = Integer.parseInt(refStr.substring(1)) - 1;
+                        int bank = refStr.charAt(0) - 'A';
 
-                    MultiSound sound = soundBank.get(rowIndex);
-                    int slotIdx = columnIndex - 2;
-                    SoundSlotRef soundSlotRef = sound.getSlotRefs().get(slotIdx);
-                    soundSlotRef.setRef(bank, program);
+                        MultiSound sound = soundBank.get(rowIndex);
+                        SoundSlotRef soundSlotRef = sound.getSlotRefs().get(slotIdx);
+                        soundSlotRef.setRef(bank, program);
 
-                    synthModel.updateMultiSound(sound);
-                    return;
-                } catch (NumberFormatException e) {
-                    isValid = false;
+                        synthModel.updateMultiSound(sound);
+                    } catch (NumberFormatException e) {
+                        JOptionPane.showMessageDialog(null, "Invalid Bank/Program reference " + refStr + " (Valid examples: A1, B22, C123)", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
                 }
-            }
 
-            if (!isValid) {
-                JOptionPane.showMessageDialog(null, "Invalid Bank/Program reference " + refStr + " (Valid examples: A1, B22, C123)", "Error", JOptionPane.ERROR_MESSAGE);
             }
-
         }
     }
-
 }

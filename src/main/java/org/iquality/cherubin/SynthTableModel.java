@@ -113,11 +113,17 @@ public class SynthTableModel extends AbstractTableModel implements SynthModel.Sy
 
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
+        Sound sound;
         switch (columnIndex) {
+            case COLUMN_NAME:
+                sound = getBank().get(rowIndex);
+                sound.setName((String) value);
+                synthModel.updateSound(sound);
+                break;
             case COLUMN_CATEGORY:
-                Sound sound = getBank().get(rowIndex);
+                sound = getBank().get(rowIndex);
                 sound.setCategory((SoundCategory) value);
-                synthModel.updateSound((SingleSound) sound);
+                synthModel.updateSound(sound);
                 break;
             default:
                 break;

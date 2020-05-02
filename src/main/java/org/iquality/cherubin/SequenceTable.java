@@ -195,7 +195,7 @@ public class SequenceTable extends JTable {
             }
 
             List<MidiMessage> midiMessages = selectedEvents.stream().map(MidiEvent::getMessage).collect(Collectors.toList());
-            int outputVariant = MidiDeviceManager.getOutputVariant(e.getModifiers());
+            int outputVariant = MidiDeviceManager.getOutputVariant(e);
             sequenceTableModel.sendMidiMessages(midiMessages, outputVariant);
         }
     }
