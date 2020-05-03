@@ -7,8 +7,6 @@ import java.awt.event.KeyEvent;
 
 public class SynthBankTable extends JTable {
 
-    public static final String DELETE_SOUND = "deleteSound";
-
     private final SynthTableModel tableModel;
 
     public SynthBankTable(SynthTableModel dm) {
@@ -37,8 +35,8 @@ public class SynthBankTable extends JTable {
         columnModel.getColumn(SynthTableModel.COLUMN_NAME).setCellRenderer(soundNameSellRenderer);
 
         KeyStroke deleteKey = KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0);
-        getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(deleteKey, DELETE_SOUND);
-        getActionMap().put(DELETE_SOUND, new AbstractAction() {
+        getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(deleteKey, "deleteSound");
+        getActionMap().put("deleteSound", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int row = getSelectedRow();

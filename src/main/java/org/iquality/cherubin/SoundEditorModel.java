@@ -2,6 +2,7 @@ package org.iquality.cherubin;
 
 import javax.sound.midi.*;
 import javax.swing.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -226,7 +227,10 @@ public class SoundEditorModel {
         });
     }
 
-    <T extends Sound> void installTableBehavior(JTable table, int soundColumn, int categoriesColumn, Supplier<Boolean> activeFlag) {
+    <T extends Sound> void installTableBehavior(SoundEditorTableBehavior soundEditorTable) {
+        JTable table = soundEditorTable.getJTable();
+        Supplier<Boolean> activeFlag = soundEditorTable::isActive;
+
         appModel.getMidiDeviceManager().addGlobalActivityListener((device, message, timeStamp) -> {
             if (activeFlag.get() && audition && editedSound != null && device.isSystemDevice(MidiDeviceManager.SystemDeviceType.controller)) {
                 MidiDevice outputDevice = appModel.getOutputDevice(editedSound.getSynthFactory());
@@ -239,7 +243,7 @@ public class SoundEditorModel {
         table.addMouseListener(new SoundSendingMouseAdapter<T>() {
             @Override
             protected T getValueAt(int row) {
-                return (T) table.getValueAt(row, soundColumn);
+                return (T) table.getValueAt(row, soundEditorTable.getSoundColumn());
             }
 
             @Override
@@ -261,7 +265,7 @@ public class SoundEditorModel {
 
         KeyStroke enter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0);
         table.getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(enter, SEND_SOUND);
-        table.getActionMap().put(SEND_SOUND, new SendSoundAction(table, soundColumn) {
+        table.getActionMap().put(SEND_SOUND, new SendSoundAction(table, soundEditorTable.getSoundColumn()) {
             @Override
             protected void onSound(Sound sound, int outputVariant, boolean on) {
                 if (on) {
@@ -275,12 +279,31 @@ public class SoundEditorModel {
 
         table.setColumnSelectionAllowed(true);
 
-        table.getColumnModel().getColumn(soundColumn).setCellEditor(new DefaultCellEditor(new JTextField()));
+        table.getColumnModel().getColumn(soundEditorTable.getSoundColumn()).setCellEditor(new DefaultCellEditor(new JTextField()));
 
-        if (categoriesColumn >= 0) {
+        if (soundEditorTable.getCategoriesColumn() >= 0) {
             JComboBox<SoundCategory> categoryComboBox = new JComboBox<>(SoundCategory.values());
-            table.getColumnModel().getColumn(categoriesColumn).setCellEditor(new DefaultCellEditor(categoryComboBox));
+            table.getColumnModel().getColumn(soundEditorTable.getCategoriesColumn()).setCellEditor(new DefaultCellEditor(categoryComboBox));
         }
+
+        KeyStroke deleteKey = KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0);
+        table.getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(deleteKey, "deleteSound");
+        table.getActionMap().put("deleteSound", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int row = table.getSelectedRow();
+                if (row < 0) {
+                    return;
+                }
+
+                soundEditorTable.deleteSound(row);
+
+//                Sound sound = (Sound) table.getValueAt(row, soundEditorTable.getSoundColumn());
+//                System.out.println("Delete sound " + sound);
+//                soundEditorTable.deleteSound(row);
+            }
+        });
+
     }
 
 }

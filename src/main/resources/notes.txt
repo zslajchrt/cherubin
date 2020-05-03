@@ -1,14 +1,18 @@
 
 Missing features:
-* (!) Setting sound names in tables
-* Show sound names in multi slots
+* (!) Custom tags
 * (!) Handle dump requests
+* A generic synth
+* Show sound names in multi slots
+* Undo/Redo 
 * Default MIDI input/output settings
 * Store MIDI files to DB
 * A popup in SoundDb a VirtualSynth tables to display SysEx, send etc...
 * MIDI Router
 
 Features:
+* Deleting multis
+* Setting sound names in tables
 * Audio monitoring
 * Monitor checkbox
 * Proxy

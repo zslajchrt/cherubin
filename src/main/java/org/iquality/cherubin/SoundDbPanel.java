@@ -1,5 +1,6 @@
 package org.iquality.cherubin;
 
+import jdk.nashorn.internal.scripts.JO;
 import org.japura.gui.CheckComboBox;
 import org.japura.gui.event.ListCheckListener;
 import org.japura.gui.model.ListCheckModel;
@@ -37,7 +38,39 @@ public class SoundDbPanel extends JPanel implements AppExtension {
         this.editedSoundStatus = new EditedSoundStatus(soundDbModel);
 
         soundDbTable = new SoundDbTable(new SoundDbTableModel(soundDbModel));
-        soundDbModel.installTableBehavior(soundDbTable, SoundDbTableModel.COLUMN_NAME, SoundDbTableModel.COLUMN_CATEGORY, () -> isSelected);
+        soundDbModel.installTableBehavior(new SoundEditorTableBehavior() {
+            @Override
+            public JTable getJTable() {
+                return soundDbTable;
+            }
+
+            @Override
+            public int getSoundColumn() {
+                return SoundDbTableModel.COLUMN_NAME;
+            }
+
+            @Override
+            public int getCategoriesColumn() {
+                return SoundDbTableModel.COLUMN_CATEGORY;
+            }
+
+            @Override
+            public boolean isActive() {
+                return isSelected;
+            }
+
+            @Override
+            public void deleteSound(int row) {
+                Sound sound = (Sound) soundDbTable.getValueAt(row, getSoundColumn());
+                int response = JOptionPane.showConfirmDialog(null, String.format("Are you sure to delete sound %s?", sound), "Delete sound", JOptionPane.YES_NO_OPTION);
+                if (response == JOptionPane.YES_OPTION) {
+                    int savedColSelIndex = soundDbTable.getColumnModel().getSelectionModel().getMinSelectionIndex();
+                    ((SoundDbTableModel)soundDbTable.getModel()).deleteSound(sound);
+                    soundDbTable.getSelectionModel().setSelectionInterval(row, row);
+                    soundDbTable.getColumnModel().getSelectionModel().setSelectionInterval(savedColSelIndex, savedColSelIndex);
+                }
+            }
+        });
 
         add(soundDbTable.getTableHeader(), BorderLayout.PAGE_START);
         add(soundDbTable, BorderLayout.CENTER);

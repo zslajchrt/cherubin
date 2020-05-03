@@ -20,6 +20,7 @@ public class SoundDbModel extends SoundEditorModel {
 
     private final Connection con;
     private final PreparedStatement insertSoundStm;
+    private final PreparedStatement deleteSoundStm;
     private final PreparedStatement updateSoundStm;
     private final PreparedStatement insertSynthSoundStm;
     private final PreparedStatement loadAllSoundStm;
@@ -40,6 +41,7 @@ public class SoundDbModel extends SoundEditorModel {
         try {
             this.con = con;
             insertSoundStm = con.prepareStatement("INSERT INTO SOUND (NAME, CATEGORY, SYSEX, SOUNDSET, TYPE) VALUES (?, ?, ?, ?, ?)");
+            deleteSoundStm = con.prepareStatement("DELETE FROM SOUND WHERE ID = ?");
             updateSoundStm = con.prepareStatement("UPDATE SOUND SET NAME=?, CATEGORY=?, SYSEX=?, SOUNDSET=? WHERE ID=?");
             loadAllSoundStm = con.prepareStatement("SELECT ID, NAME, CATEGORY, SYSEX, SOUNDSET, TYPE FROM SOUND");
             synthInstancesStm = con.prepareStatement("SELECT ID, NAME, TYPE FROM SYNTH");
@@ -277,6 +279,16 @@ public class SoundDbModel extends SoundEditorModel {
         insertSoundStm.setString(4, sound.getSoundSetName());
         insertSoundStm.setString(5, sound.getSynthFactory().getSynthId());
         insertSoundStm.executeUpdate();
+    }
+
+    public void deleteSound(Sound sound) {
+        try {
+            deleteSoundStm.clearParameters();
+            deleteSoundStm.setInt(1, sound.getId());
+            deleteSoundStm.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void updateSound(Sound sound) {

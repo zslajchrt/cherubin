@@ -131,6 +131,12 @@ public class SoundDbTableModel extends AbstractTableModel {
         }
     }
 
+    public void deleteSound(Sound sound) {
+        listSounds.remove(sound);
+        soundDbModel.deleteSound(sound);
+        fireTableDataChanged();
+    }
+
     private void applyFiltersList() {
         listSounds = soundDbModel.getSoundSets().stream().filter(soundSetFilter).map(soundSet -> soundSet.sounds.stream().filter(categoryFilter).filter(synthFilter)).flatMap(s -> s).collect(Collectors.toList());
         fireTableDataChanged();

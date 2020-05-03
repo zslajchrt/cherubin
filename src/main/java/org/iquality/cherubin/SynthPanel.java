@@ -47,14 +47,15 @@ public class SynthPanel extends JPanel implements AppExtension {
         for (int i = 0; i < synthModel.getSynthFactory().getBankCount(); i++) {
             SynthTableModel synthBankTableModel = new SynthTableModel(synthModel, i);
             SynthBankTable synthBankTable = new SynthBankTable(synthBankTableModel);
-            synthModel.installTableBehavior(synthBankTable, SynthTableModel.COLUMN_NAME, SynthTableModel.COLUMN_CATEGORY, () -> isSelected);
+            synthModel.installTableBehavior(new SingleSoundEditorTableBehavior(synthBankTable));
             tabbedPane.add(new JScrollPane(synthBankTable), "" + (char) ('A' + i));
             tabTables.add(synthBankTable);
         }
 
         if (synthModel.getSynthFactory().hasMultiBank()) {
-            SynthMultiTable synthMultiTable = new SynthMultiTable(new SynthMultiTableModel(synthModel, synthModel.getMultiBank()));
-            synthModel.installTableBehavior(synthMultiTable, SynthMultiTableModel.COLUMN_NAME, -1, () -> isSelected);
+            SynthMultiTableModel synthMultiTableModel = new SynthMultiTableModel(synthModel);
+            SynthMultiTable synthMultiTable = new SynthMultiTable(synthMultiTableModel);
+            synthModel.installTableBehavior(new MultiSoundEditorTableBehavior(synthMultiTable));
             tabbedPane.add(new JScrollPane(synthMultiTable), "Multi");
             tabTables.add(synthMultiTable);
         }
@@ -310,6 +311,82 @@ public class SynthPanel extends JPanel implements AppExtension {
             } catch (UnsupportedFlavorException | IOException ex) {
                 throw new RuntimeException(ex);
             }
+        }
+    }
+
+    private class SingleSoundEditorTableBehavior implements SoundEditorTableBehavior {
+        private final SynthBankTable synthBankTable;
+        private final SynthTableModel synthBankTableModel;
+
+        public SingleSoundEditorTableBehavior(SynthBankTable synthBankTable) {
+            this.synthBankTable = synthBankTable;
+            this.synthBankTableModel = (SynthTableModel) synthBankTable.getModel();
+        }
+
+        @Override
+        public JTable getJTable() {
+            return synthBankTable;
+        }
+
+        @Override
+        public int getSoundColumn() {
+            return SynthTableModel.COLUMN_NAME;
+        }
+
+        @Override
+        public int getCategoriesColumn() {
+            return SynthTableModel.COLUMN_CATEGORY;
+        }
+
+        @Override
+        public boolean isActive() {
+            return isSelected;
+        }
+
+        @Override
+        public void deleteSound(int row) {
+            int savedColIndex = synthBankTable.getColumnModel().getSelectionModel().getMinSelectionIndex();
+            synthBankTableModel.deleteSound(row);
+            synthBankTable.getSelectionModel().setSelectionInterval(row, row);
+            synthBankTable.getColumnModel().getSelectionModel().setSelectionInterval(savedColIndex, savedColIndex);
+        }
+    }
+
+    private class MultiSoundEditorTableBehavior implements SoundEditorTableBehavior {
+        private final SynthMultiTable synthMultiTable;
+        private final SynthMultiTableModel synthMultiTableModel;
+
+        public MultiSoundEditorTableBehavior(SynthMultiTable synthMultiTable) {
+            this.synthMultiTable = synthMultiTable;
+            this.synthMultiTableModel = (SynthMultiTableModel) synthMultiTable.getModel();
+        }
+
+        @Override
+        public JTable getJTable() {
+            return synthMultiTable;
+        }
+
+        @Override
+        public int getSoundColumn() {
+            return SynthMultiTableModel.COLUMN_NAME;
+        }
+
+        @Override
+        public int getCategoriesColumn() {
+            return -1;
+        }
+
+        @Override
+        public boolean isActive() {
+            return isSelected;
+        }
+
+        @Override
+        public void deleteSound(int row) {
+            int savedColIndex = synthMultiTable.getColumnModel().getSelectionModel().getMinSelectionIndex();
+            synthMultiTableModel.deleteSound(row);
+            synthMultiTable.getSelectionModel().setSelectionInterval(row, row);
+            synthMultiTable.getColumnModel().getSelectionModel().setSelectionInterval(savedColIndex, savedColIndex);
         }
     }
 }

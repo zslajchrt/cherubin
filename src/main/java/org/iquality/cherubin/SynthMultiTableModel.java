@@ -10,13 +10,11 @@ public class SynthMultiTableModel extends AbstractTableModel {
     public static final int COLUMN_SLOT_REF = 2;
 
     private final String[] columnNames;
-    private final List<MultiSound> soundBank;
     private final SynthModel synthModel;
     private final int multiSlotCount;
 
-    public SynthMultiTableModel(SynthModel synthModel, List<MultiSound> soundBank) {
+    public SynthMultiTableModel(SynthModel synthModel) {
         this.synthModel = synthModel;
-        this.soundBank = soundBank;
         this.multiSlotCount = synthModel.getSynth().getSynthFactory().getMultiSlotCount();
 
         columnNames = new String[2 + multiSlotCount];
@@ -70,7 +68,7 @@ public class SynthMultiTableModel extends AbstractTableModel {
 
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-        MultiSound sound = soundBank.get(rowIndex);
+        MultiSound sound = getMultiBank().get(rowIndex);
         Object returnValue;
         switch (columnIndex) {
             case COLUMN_SLOT:
@@ -89,10 +87,14 @@ public class SynthMultiTableModel extends AbstractTableModel {
         return returnValue;
     }
 
+    private List<MultiSound> getMultiBank() {
+        return getSynthModel().getSynth().getMulti();
+    }
+
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
         if (columnIndex == COLUMN_NAME) {
-            MultiSound sound = soundBank.get(rowIndex);
+            MultiSound sound = getMultiBank().get(rowIndex);
             sound.setName((String) value);
         } else {
             int slotIdx = columnIndex - 2;
@@ -105,7 +107,7 @@ public class SynthMultiTableModel extends AbstractTableModel {
                         int program = Integer.parseInt(refStr.substring(1)) - 1;
                         int bank = refStr.charAt(0) - 'A';
 
-                        MultiSound sound = soundBank.get(rowIndex);
+                        MultiSound sound = getMultiBank().get(rowIndex);
                         SoundSlotRef soundSlotRef = sound.getSlotRefs().get(slotIdx);
                         soundSlotRef.setRef(bank, program);
 
@@ -118,4 +120,10 @@ public class SynthMultiTableModel extends AbstractTableModel {
             }
         }
     }
+
+    public void deleteSound(int slot) {
+        synthModel.getSynth().deleteMultiSound(slot);
+        fireTableDataChanged();
+    }
+
 }

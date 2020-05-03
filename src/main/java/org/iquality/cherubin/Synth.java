@@ -41,8 +41,13 @@ public class Synth extends SynthHeader {
     }
 
     public void deleteSound(int bankNum, int slot) {
-        banks.get(bankNum).set(slot, new BlofeldSingleSound());
-        dirty = true;
+        banks.get(bankNum).set(slot, getSynthFactory().createSingleSound());
+        setDirty(true);
+    }
+
+    public void deleteMultiSound(int slot) {
+        multi.set(slot, getSynthFactory().createMultiSound());
+        setDirty(true);
     }
 
     void setDirty(boolean dirty) {
