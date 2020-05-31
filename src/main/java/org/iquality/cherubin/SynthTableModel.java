@@ -103,7 +103,7 @@ public class SynthTableModel extends AbstractTableModel implements SynthModel.Sy
             case COLUMN_SOUNDSET:
                 return false;
             default:
-                throw new IllegalArgumentException("Invalid column index");
+                return false;
         }
     }
 

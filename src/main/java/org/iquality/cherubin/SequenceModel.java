@@ -1,8 +1,6 @@
 package org.iquality.cherubin;
 
-import javax.sound.midi.MidiMessage;
-import javax.sound.midi.Receiver;
-import javax.sound.midi.Sequence;
+import javax.sound.midi.*;
 import java.io.File;
 import java.util.List;
 
@@ -57,5 +55,11 @@ public class SequenceModel {
 
     public void sendMidiMessages(List<MidiMessage> midiMessages, int outputVariant) {
         midiServices.sendMidiMessages(midiMessages, midiDeviceManager.getOutputDevice(outputVariant));
+    }
+
+    public void deleteEvent(int trackNum, int row) {
+        Track track = sequence.getTracks()[trackNum];
+        MidiEvent event = track.get(row);
+        track.remove(event);
     }
 }

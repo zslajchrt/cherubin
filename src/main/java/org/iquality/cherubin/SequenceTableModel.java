@@ -1,6 +1,7 @@
 package org.iquality.cherubin;
 
 import javax.sound.midi.*;
+import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import java.io.File;
 import java.util.List;
@@ -81,5 +82,10 @@ public class SequenceTableModel extends AbstractTableModel {
 
     public void sendMidiMessages(List<MidiMessage> midiMessages, int outputVariant) {
         sequenceModel.sendMidiMessages(midiMessages, outputVariant);
+    }
+
+    public void deleteEvent(int row) {
+        sequenceModel.deleteEvent(trackNumber, row);
+        fireTableDataChanged();
     }
 }

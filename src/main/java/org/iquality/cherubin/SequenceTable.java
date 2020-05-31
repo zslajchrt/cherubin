@@ -11,6 +11,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -53,6 +54,24 @@ public class SequenceTable extends JTable {
                 // TODO?
             }
         });
+
+        KeyStroke deleteKey = KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0);
+        getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(deleteKey, "deleteSound");
+        getActionMap().put("deleteSound", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int row = SequenceTable.this.getSelectedRow();
+                if (row < 0) {
+                    return;
+                }
+
+                int response = JOptionPane.showConfirmDialog(null, "Are you sure to delete MIDI event?", "Delete MIDI event", JOptionPane.YES_NO_OPTION);
+                if (response == JOptionPane.YES_OPTION) {
+                    sequenceTableModel.deleteEvent(row);
+                }
+            }
+        });
+
 
         JPopupMenu popupMenu = new JPopupMenu();
 
@@ -130,10 +149,10 @@ public class SequenceTable extends JTable {
         @Override
         public void valueChanged(ListSelectionEvent e) {
             List<MidiEvent> selectedEvents = getSelectedEvents();
-            if (!selectedEvents.isEmpty() && selectedEvents.get(0).getMessage() instanceof SysexMessage) {
+            if (selectedEvents != null && !selectedEvents.isEmpty() && selectedEvents.get(0).getMessage() instanceof SysexMessage) {
                 setEnabled(true);
             } else {
-                setEnabled(true);
+                setEnabled(false);
             }
         }
     }
