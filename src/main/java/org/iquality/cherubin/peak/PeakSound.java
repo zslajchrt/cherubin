@@ -85,14 +85,8 @@ public class PeakSound extends AbstractSound implements SingleSound {
 
     @Override
     protected void setCategoryImp(SoundCategory category) {
-        byte[] msg = getSysEx().getMessage();
         PeakCategory peakCategory = PeakCategory.valueOf(category.name());
-        msg[CATEGORY_OFFSET] = (byte) peakCategory.ordinal();
-        try {
-            sysEx = new SysexMessage(msg, msg.length);
-        } catch (InvalidMidiDataException e) {
-            throw new RuntimeException(e);
-        }
+        updateSysEx(CATEGORY_OFFSET, (byte) peakCategory.ordinal());
     }
 
     @Override
@@ -108,16 +102,20 @@ public class PeakSound extends AbstractSound implements SingleSound {
     }
 
     @Override
-    protected void patch(byte[] data, int programBank, int programNumber) {
-        data[REGULAR_PATCH_FLAG_OFFSET] = (byte) 1;
-        data[BANK_OFFSET] = (byte) (programBank + 1);
-        data[PROGRAM_OFFSET] = (byte) programNumber;
+    protected void setBankImp(int bank) {
+        updateSysEx(BANK_OFFSET, (byte) bank);
     }
 
     @Override
-    protected void patchForEditBuffer(byte[] data) {
+    protected void setProgramImp(int program) {
+        updateSysEx(PROGRAM_OFFSET, (byte) program);
+    }
+
+    @Override
+    protected byte[] patchForEditBuffer(byte[] data) {
         data[REGULAR_PATCH_FLAG_OFFSET] = 0;
         data[BANK_OFFSET] = 0;
         data[PROGRAM_OFFSET] = 0;
+        return data;
     }
 }

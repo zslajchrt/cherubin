@@ -2,10 +2,8 @@ package org.iquality.cherubin.blofeld;
 
 import org.iquality.cherubin.*;
 
-import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -65,6 +63,12 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
     }
 
     @Override
+    public void initialize() {
+        super.initialize();
+        updateCheckSum(MULTI_NAME_OFFSET, MULTI_CHECKSUM_OFFSET);
+    }
+
+    @Override
     protected String getNameImp() {
         byte[] msg = getSysEx().getMessage();
         return new String(msg, MULTI_NAME_OFFSET, NAME_LENGTH);
@@ -102,16 +106,22 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
     }
 
     @Override
-    protected void patch(byte[] data, int programBank, int programNumber) {
-        data[BANK_OFFSET] = (byte) programBank;
-        data[PROGRAM_OFFSET] = (byte) programNumber;
-        data[MULTI_CHECKSUM_OFFSET] = Utils.checksum(data, MULTI_NAME_OFFSET, MULTI_CHECKSUM_OFFSET);
+    protected void setBankImp(int bank) {
+        // no banks in Blofeld multi mode
     }
 
     @Override
-    protected void patchForEditBuffer(byte[] data) {
+    protected void setProgramImp(int program) {
+        updateSysEx(PROGRAM_OFFSET, (byte) program);
+    }
+
+    @Override
+    protected byte[] patchForEditBuffer(byte[] data) {
         //patch(data, 0x7F, 0x00);
-        patch(data, 0x7f, 0x00);
+        data[BANK_OFFSET] = (byte) 07f;
+        data[PROGRAM_OFFSET] = (byte) 0x00;
+        data[MULTI_CHECKSUM_OFFSET] = Utils.checksum(data, MULTI_NAME_OFFSET, MULTI_CHECKSUM_OFFSET);
+        return data;
     }
 
     @Override

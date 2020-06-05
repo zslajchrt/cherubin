@@ -5,7 +5,7 @@ import org.iquality.cherubin.blofeld.InitSysexMessage;
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;
 import java.util.Arrays;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 public abstract class AbstractSound implements Sound {
 
@@ -24,7 +24,6 @@ public abstract class AbstractSound implements Sound {
 
     @Override
     public void initialize() {
-        repatch();
     }
 
     @Override
@@ -60,8 +59,6 @@ public abstract class AbstractSound implements Sound {
         } catch (InvalidMidiDataException e) {
             throw new RuntimeException(e);
         }
-
-        repatch();
     }
 
     protected abstract int getNameOffset();
@@ -71,13 +68,10 @@ public abstract class AbstractSound implements Sound {
     @Override
     public void setSysEx(SysexMessage sysEx) {
         assert sysEx != null;
-        byte[] data = sysEx.getMessage();
-        patch(data, getBank(), getProgram());
-        try {
-            this.sysEx = new SysexMessage(data, data.length);
-        } catch (InvalidMidiDataException e) {
-            throw new RuntimeException(e);
+        if (!getSynthFactory().accepts(sysEx)) {
+            throw new RuntimeException("SysEx not accepted by synth factory " + getSynthFactory());
         }
+        this.sysEx = sysEx;
     }
 
     public void setSoundSetName(String soundSetName) {
@@ -114,15 +108,28 @@ public abstract class AbstractSound implements Sound {
     protected abstract int getBankImp();
 
     @Override
+    public void setBank(int bank) {
+        setBankImp(bank);
+    }
+
+    protected abstract void setBankImp(int bank);
+
+    @Override
     public final int getProgram() {
         return getProgramImp();
     }
 
     @Override
+    public void setProgram(int program) {
+        setProgramImp(program);
+    }
+
+    protected abstract void setProgramImp(int program);
+
+    @Override
     public void setCategory(SoundCategory category) {
         if (!isInit()) {
             setCategoryImp(category);
-            repatch();
         }
     }
 
@@ -130,63 +137,57 @@ public abstract class AbstractSound implements Sound {
 
     protected abstract int getProgramImp();
 
-    protected void updateSysEx(int offset, byte value) {
-        byte[] data = getSysEx().getMessage();
-        data[offset] = value;
+    protected SysexMessage patchSysEx(Function<byte[], byte[]> patcher) {
+        byte[] data = patcher.apply(getSysEx().getMessage());
         try {
-            sysEx = new SysexMessage(data, data.length);
+            if (sysEx instanceof InitSysexMessage) {
+                return new InitSysexMessage(data, data.length);
+            } else {
+                return new SysexMessage(data, data.length);
+            }
         } catch (InvalidMidiDataException e) {
             throw new RuntimeException(e);
         }
     }
 
+    protected void updateSysEx(int offset, byte value) {
+        setSysEx(patchSysEx(data -> {
+            data[offset] = value;
+            return data;
+        }));
+    }
+
+    protected void updateSysEx(Function<byte[], byte[]> patcher) {
+        setSysEx(patchSysEx(patcher));
+    }
+
     @Override
-    public Sound clone(int programBank, int programNumber) {
-        return cloneHelper(data -> patch(data, programBank, programNumber));
+    public Sound clone() {
+        return patchSound(data -> data);
     }
 
     @Override
     public Sound cloneForEditBuffer() {
-        return cloneHelper(this::patchForEditBuffer);
+        return patchSound(this::patchForEditBuffer);
     }
 
     @Override
     public void verify() throws VerificationException {
     }
 
-    private Sound cloneHelper(Consumer<byte[]> patcher) {
-        SysexMessage sysEx = getSysEx();
-        byte[] data = sysEx.getMessage(); // getMessage() returns a copy
-        patcher.accept(data);
-        try {
-            if (sysEx instanceof InitSysexMessage) {
-                sysEx = new InitSysexMessage(data, data.length);
-            } else {
-                sysEx = new SysexMessage(data, data.length);
-            }
-            return getSynthFactory().createOneSound(getId(), getName(), sysEx, getCategory(), getSoundSetName());
-        } catch (InvalidMidiDataException e) {
-            throw new RuntimeException(e);
-        }
+    private Sound patchSound(Function<byte[], byte[]> patcher) {
+        SysexMessage patchedSysEx = patchSysEx(patcher);
+        return getSynthFactory().createOneSound(getId(), getName(), patchedSysEx, getCategory(), getSoundSetName());
     }
 
-    protected void repatch() {
-        if (sysEx instanceof InitSysexMessage) {
-            return;
-        }
+    protected abstract byte[] patchForEditBuffer(byte[] data);
 
-        byte[] msg = sysEx.getMessage();
-        patch(msg, getBankImp(), getProgramImp());
-        try {
-            sysEx = new SysexMessage(msg, msg.length);
-        } catch (InvalidMidiDataException e) {
-            throw new RuntimeException(e);
-        }
+    protected void updateCheckSum(int startOffset, int endOffset) {
+        updateSysEx(data -> {
+            data[endOffset] = Utils.checksum(data, startOffset, endOffset);
+            return data;
+        });
     }
-
-    protected abstract void patch(byte[] data, int programBank, int programNumber);
-
-    protected abstract void patchForEditBuffer(byte[] data);
 
     @Override
     public String toString() {

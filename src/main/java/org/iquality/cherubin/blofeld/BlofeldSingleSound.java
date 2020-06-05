@@ -26,6 +26,12 @@ public class BlofeldSingleSound extends AbstractSound implements BlofeldSoundCom
     }
 
     @Override
+    public void initialize() {
+        super.initialize();
+        updateCheckSum(SDATA_OFFSET, SINGLE_CHECKSUM_OFFSET);
+    }
+
+    @Override
     protected String getNameImp() {
         byte[] msg = getSysEx().getMessage();
         return new String(msg, SINGLE_NAME_OFFSET, NAME_LENGTH);
@@ -50,13 +56,8 @@ public class BlofeldSingleSound extends AbstractSound implements BlofeldSoundCom
 
     @Override
     protected void setCategoryImp(SoundCategory category) {
-        byte[] msg = getSysEx().getMessage();
-        msg[SINGLE_CAT_OFFSET] = (byte) category.ordinal();
-        try {
-            sysEx = new SysexMessage(msg, msg.length);
-        } catch (InvalidMidiDataException e) {
-            throw new RuntimeException(e);
-        }
+        updateSysEx(SINGLE_CAT_OFFSET, (byte) category.ordinal());
+        updateCheckSum(SDATA_OFFSET, SINGLE_CHECKSUM_OFFSET);
     }
 
     @Override
@@ -72,15 +73,20 @@ public class BlofeldSingleSound extends AbstractSound implements BlofeldSoundCom
     }
 
     @Override
-    protected void patch(byte[] data, int programBank, int programNumber) {
-        data[BANK_OFFSET] = (byte) programBank;
-        data[PROGRAM_OFFSET] = (byte) programNumber;
-        data[SINGLE_CHECKSUM_OFFSET] = Utils.checksum(data, SDATA_OFFSET, SINGLE_CHECKSUM_OFFSET);
-        //data[SINGLE_CHECKSUM_OFFSET] = 0x7f;
+    protected void setBankImp(int bank) {
+        updateSysEx(BANK_OFFSET, (byte) bank);
     }
 
     @Override
-    protected void patchForEditBuffer(byte[] data) {
-        patch(data, 0x7F, 0x00);
+    protected void setProgramImp(int program) {
+        updateSysEx(PROGRAM_OFFSET, (byte) program);
+    }
+
+    @Override
+    protected byte[] patchForEditBuffer(byte[] data) {
+        data[BANK_OFFSET] = 0x7F;
+        data[PROGRAM_OFFSET] = 0x00;
+        data[SINGLE_CHECKSUM_OFFSET] = Utils.checksum(data, SDATA_OFFSET, SINGLE_CHECKSUM_OFFSET);
+        return data;
     }
 }

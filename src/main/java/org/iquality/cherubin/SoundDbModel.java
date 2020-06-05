@@ -221,7 +221,7 @@ public class SoundDbModel extends SoundEditorModel {
                 byte[] sysExBytes = sysExBlob.getBytes(0, (int) sysExBlob.length());
                 String soundSetName = resultSet.getString("SOUNDSET");
 
-                Sound sound = synthFactory.createOneSound(soundId, soundName, new SysexMessage(sysExBytes, sysExBytes.length), category, soundSetName);
+                Sound sound = synthFactory.createOneSound(soundId, soundName, new SysexMessage(sysExBytes, sysExBytes.length), category, soundSetName).clone(bankNum, slot);
                 bank.set(slot, sound);
             }
 

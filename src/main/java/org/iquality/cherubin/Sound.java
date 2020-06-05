@@ -12,6 +12,18 @@ public interface Sound {
 
     void setSysEx(SysexMessage sysEx);
 
+    default void setSysEx(SysexMessage sysEx, boolean restoreBankAndProgram) {
+        if (restoreBankAndProgram) {
+            int savedBank = getBank();
+            int savedProgram = getProgram();
+            setSysEx(sysEx);
+            setBank(savedBank);
+            setProgram(savedProgram);
+        } else {
+            setSysEx(sysEx);
+        }
+    }
+
     String getName();
 
     void setName(String name);
@@ -32,9 +44,20 @@ public interface Sound {
 
     int getBank();
 
+    void setBank(int bank);
+
     int getProgram();
 
-    Sound clone(int programBank, int programNumber);
+    void setProgram(int program);
+
+    Sound clone();
+
+    default Sound clone(int programBank, int programNumber) {
+        Sound cloned = clone();
+        cloned.setBank(programBank);
+        cloned.setProgram(programNumber);
+        return cloned;
+    }
 
     Sound cloneForEditBuffer();
 

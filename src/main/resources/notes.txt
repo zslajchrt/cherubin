@@ -1,5 +1,7 @@
 
 Missing features:
+* Display synth model name, frame title
+* Listen to dump: indicate which MIDI inputs are used for listening (also w.r.t. alternatives, when pressed a key combination), status bar
 * Remember last folders for dialogos
 * (!) Recover from switching off and on of a MIDI device
 * (!) MIDI synth/input/output settings
@@ -22,3 +24,7 @@ Features:
 * MIDI traffic indicators for all inputs/outputs (horizontal LEDs in the status bar)
 * (!) Show actual MIDI Input/Output for key modifiers being pressed
 	* Also do it for "Listen to dump" (by a tooltip)
+
+
+
+

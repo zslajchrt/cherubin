@@ -94,7 +94,7 @@ public class SoundEditorModel {
                 @Override
                 protected void onSingleSoundDump(SysexMessage sysEx) {
                     if (activeFlag.get() && !(editedSound instanceof MultiSound)) {
-                        editedSound.setSysEx(sysEx);
+                        editedSound.setSysEx(sysEx, true);
                         fireEditedSoundUpdated(editedSound);
                     }
                 }
@@ -102,7 +102,7 @@ public class SoundEditorModel {
                 @Override
                 protected void onMultiSoundDump(SysexMessage sysEx) {
                     if (activeFlag.get() && (editedSound instanceof MultiSound)) {
-                        editedSound.setSysEx(sysEx);
+                        editedSound.setSysEx(sysEx, true);
                         fireEditedSoundUpdated(editedSound);
                     }
                 }
@@ -139,6 +139,7 @@ public class SoundEditorModel {
         if (!sound.isInit()) {
             // Do not update the synth's edit buffer with the initial (empty) sound
             SysexMessage sysEx = sound.cloneForEditBuffer().getSysEx();
+            //SysexMessage sysEx = sound.getSysEx();
             midiServices.sendMessage(outputDevice, sysEx);
         }
         if (audition) {
