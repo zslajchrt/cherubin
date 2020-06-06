@@ -2,6 +2,7 @@ package org.iquality.cherubin;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 
@@ -29,7 +30,10 @@ public class SynthBankTable extends JTable {
         DefaultTableCellRenderer soundNameSellRenderer = new DefaultTableCellRenderer() {
             @Override
             protected void setValue(Object value) {
-                setText(((Sound)value).getName());
+                Sound sound = (Sound) value;
+                setText(sound.getName());
+                Color color = sound.isInit() ? Color.RED : Color.BLACK;
+                setForeground(color);
             }
         };
         columnModel.getColumn(SynthTableModel.COLUMN_NAME).setCellRenderer(soundNameSellRenderer);

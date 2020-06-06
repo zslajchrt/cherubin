@@ -2,6 +2,7 @@ package org.iquality.cherubin;
 
 import javax.swing.*;
 import javax.swing.table.*;
+import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -46,5 +47,27 @@ public class SoundDbTable extends JTable {
 
     static {
         soundClipboardFlavors = new DataFlavor[]{DataFlavor.stringFlavor, VIRTUAL_SYNTH_SOUND_FLAVOR};
+    }
+
+    public int findSoundRow(Sound sound) {
+        int rowCount = getRowCount();
+        for (int r = 0; r < rowCount; r++) {
+            Sound s = (Sound) getValueAt(r, SoundDbTableModel.COLUMN_NAME);
+            if (s == sound) {
+                return r;
+            }
+        }
+        return -1;
+    }
+
+    public void selectSound(Sound sound) {
+        int row = findSoundRow(sound);
+        if (row < 0) {
+            return;
+        }
+        getSelectionModel().setSelectionInterval(row, row);
+        getColumnModel().getSelectionModel().setSelectionInterval(SoundDbTableModel.COLUMN_ID, SoundDbTableModel.COLUMN_ID);
+        Rectangle cellRect = getCellRect(row, SoundDbTableModel.COLUMN_ID, true);
+        scrollRectToVisible(cellRect);
     }
 }

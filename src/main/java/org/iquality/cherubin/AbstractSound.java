@@ -5,14 +5,18 @@ import org.iquality.cherubin.blofeld.InitSysexMessage;
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.SysexMessage;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.function.Function;
 
 public abstract class AbstractSound implements Sound {
 
-    private final int id;
+    private int id;
     private final SynthFactory synthFactory;
     protected SysexMessage sysEx;
     protected String soundSetName;
+    private final Map<Object, Object> customData = new HashMap<>();
 
     public AbstractSound(int id, SysexMessage sysEx, String soundSetName, SynthFactory synthFactory) {
         assert sysEx != null;
@@ -37,11 +41,19 @@ public abstract class AbstractSound implements Sound {
     }
 
     @Override
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    @Override
     public final String getName() {
         return isInit() ? "Empty" : getNameImp();
     }
 
-    protected abstract String getNameImp();
+    protected String getNameImp() {
+        byte[] msg = getSysEx().getMessage();
+        return new String(msg, getNameOffset(), getNameMaxLength()).trim();
+    }
 
     @Override
     public void setName(String name) {
@@ -59,6 +71,17 @@ public abstract class AbstractSound implements Sound {
         } catch (InvalidMidiDataException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public void appendToName(String ext) {
+        String newName = getName();
+        int toCut = newName.length() + ext.length() - getNameMaxLength();
+        if (toCut > 0) {
+            newName = newName.substring(0, newName.length() - toCut);
+        }
+        newName += ext;
+        setName(newName);
     }
 
     protected abstract int getNameOffset();
@@ -167,6 +190,16 @@ public abstract class AbstractSound implements Sound {
     }
 
     @Override
+    public void setCustomData(Object name, Object data) {
+        customData.put(name, data);
+    }
+
+    @Override
+    public Object getCustomData(Object name) {
+        return customData.get(name);
+    }
+
+    @Override
     public Sound cloneForEditBuffer() {
         return patchSound(this::patchForEditBuffer);
     }
@@ -177,7 +210,15 @@ public abstract class AbstractSound implements Sound {
 
     private Sound patchSound(Function<byte[], byte[]> patcher) {
         SysexMessage patchedSysEx = patchSysEx(patcher);
-        return getSynthFactory().createOneSound(getId(), getName(), patchedSysEx, getCategory(), getSoundSetName());
+        return copyCustomData(getSynthFactory().createOneSound(getId(), getName(), patchedSysEx, getCategory(), getSoundSetName()));
+    }
+
+    private Sound copyCustomData(Sound sound) {
+        for (Iterator<Map.Entry<Object, Object>> iterator = customData.entrySet().iterator(); iterator.hasNext(); ) {
+            Map.Entry<Object, Object> next = iterator.next();
+            sound.setCustomData(next.getKey(), next.getValue());
+        }
+        return sound;
     }
 
     protected abstract byte[] patchForEditBuffer(byte[] data);

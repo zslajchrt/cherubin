@@ -10,6 +10,8 @@ public interface Sound {
 
     int getId();
 
+    void setId(int id);
+
     void setSysEx(SysexMessage sysEx);
 
     default void setSysEx(SysexMessage sysEx, boolean restoreBankAndProgram) {
@@ -27,6 +29,8 @@ public interface Sound {
     String getName();
 
     void setName(String name);
+
+    void appendToName(String ext);
 
     SoundCategory getCategory();
 
@@ -51,6 +55,10 @@ public interface Sound {
     void setProgram(int program);
 
     Sound clone();
+
+    void setCustomData(Object name, Object data);
+
+    Object getCustomData(Object name);
 
     default Sound clone(int programBank, int programNumber) {
         Sound cloned = clone();

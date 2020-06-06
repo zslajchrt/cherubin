@@ -65,7 +65,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
                 int response = JOptionPane.showConfirmDialog(null, String.format("Are you sure to delete sound %s?", sound), "Delete sound", JOptionPane.YES_NO_OPTION);
                 if (response == JOptionPane.YES_OPTION) {
                     int savedColSelIndex = soundDbTable.getColumnModel().getSelectionModel().getMinSelectionIndex();
-                    ((SoundDbTableModel)soundDbTable.getModel()).deleteSound(sound);
+                    ((SoundDbTableModel) soundDbTable.getModel()).deleteSound(sound);
                     soundDbTable.getSelectionModel().setSelectionInterval(row, row);
                     soundDbTable.getColumnModel().getSelectionModel().setSelectionInterval(savedColSelIndex, savedColSelIndex);
                 }
@@ -202,7 +202,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
     public static DataFlavor SOUND_DB_FLAVOR = new DataFlavor(DataFlavor.javaJVMLocalObjectMimeType + ";class=" + Sound.class.getName(), "Sound");
 
-    private static final DataFlavor[] soundClipboardFlavors;
+    static final DataFlavor[] soundClipboardFlavors;
 
     static {
         soundClipboardFlavors = new DataFlavor[]{DataFlavor.stringFlavor, SOUND_DB_FLAVOR};
@@ -262,7 +262,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
                     if (DataFlavor.stringFlavor.equals(flavor)) {
                         return sound.toString();
                     } else if (SOUND_DB_FLAVOR.equals(flavor)) {
-                        return sound;
+                        return sound.clone();
                     } else {
                         throw new UnsupportedFlavorException(flavor);
                     }
@@ -276,24 +276,37 @@ public class SoundDbPanel extends JPanel implements AppExtension {
         public void actionPerformed(ActionEvent e) {
             Clipboard clipboard = getSystemClipboard();
             try {
-                if (!clipboard.isDataFlavorAvailable(SequencePanel.MIDI_EVENTS_FLAVOR)) {
-                    return;
-                }
-                MidiEvents events = (MidiEvents) clipboard.getData(SequencePanel.MIDI_EVENTS_FLAVOR);
-
-                String soundSetName = JOptionPane.showInputDialog("Please enter sound set name: ");
-                if (soundSetName != null) {
-                    SoundSet<Sound> soundSet = SoundDbModel.midiEventsToSoundSet(events, soundSetName);
-                    if (soundSet != null) {
-                        soundDbTable.tableModel.addSoundSet(soundSet);
-                        JOptionPane.showMessageDialog(null, soundSet.sounds.size() + " new sounds imported from " + events.getEvents().size(), "Sound import summary", JOptionPane.INFORMATION_MESSAGE);
-                    } else {
-                        JOptionPane.showMessageDialog(null, "No synth factory found for sysex", "Sound import error", JOptionPane.ERROR_MESSAGE);
-                    }
+                if (clipboard.isDataFlavorAvailable(SoundDbPanel.SOUND_DB_FLAVOR)) {
+                    handleSound(clipboard);
+                } else if (clipboard.isDataFlavorAvailable(SequencePanel.MIDI_EVENTS_FLAVOR)) {
+                    handleMidiEvent(clipboard);
                 }
 
             } catch (UnsupportedFlavorException | IOException ex) {
                 throw new RuntimeException(ex);
+            }
+        }
+
+        private void handleSound(Clipboard clipboard) throws UnsupportedFlavorException, IOException {
+            Sound sound = (Sound) clipboard.getData(SoundDbPanel.SOUND_DB_FLAVOR);
+            sound.appendToName("-Copy");
+            soundDbTable.tableModel.addSound(sound);
+
+            soundDbTable.selectSound(sound);
+        }
+
+        private void handleMidiEvent(Clipboard clipboard) throws UnsupportedFlavorException, IOException {
+            MidiEvents events = (MidiEvents) clipboard.getData(SequencePanel.MIDI_EVENTS_FLAVOR);
+
+            String soundSetName = JOptionPane.showInputDialog("Please enter sound set name: ");
+            if (soundSetName != null) {
+                SoundSet<Sound> soundSet = SoundDbModel.midiEventsToSoundSet(events, soundSetName);
+                if (soundSet != null) {
+                    soundDbTable.tableModel.addSoundSet(soundSet);
+                    JOptionPane.showMessageDialog(null, soundSet.sounds.size() + " new sounds imported from " + events.getEvents().size(), "Sound import summary", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(null, "No synth factory found for sysex", "Sound import error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
     }

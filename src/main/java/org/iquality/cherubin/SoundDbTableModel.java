@@ -4,6 +4,7 @@ import org.japura.gui.event.ListCheckListener;
 import org.japura.gui.event.ListEvent;
 
 import javax.swing.table.AbstractTableModel;
+import java.sql.Timestamp;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -15,9 +16,11 @@ public class SoundDbTableModel extends AbstractTableModel {
     public static final int COLUMN_CATEGORY = 2;
     public static final int COLUMN_SOUNDSET = 3;
     public static final int COLUMN_SYNTH = 4;
+    public static final int COLUMN_TS = 5;
+    public static final Timestamp NULL_TS = new Timestamp(0);
 
     private final SoundDbModel soundDbModel;
-    private final String[] columnNames = {"Id", "Name", "Category", "Sound Set", "Synth"};
+    private final String[] columnNames = {"Id", "Name", "Category", "Sound Set", "Synth", "Timestamp"};
     private List<Sound> listSounds;
     private Predicate<Sound> synthFilter = s -> true;
     private Predicate<Sound> categoryFilter = s -> true;
@@ -64,6 +67,8 @@ public class SoundDbTableModel extends AbstractTableModel {
                 return String.class;
             case COLUMN_SYNTH:
                 return String.class;
+            case COLUMN_TS:
+                return Timestamp.class;
             default:
                 throw new IllegalArgumentException("Invalid column index");
         }
@@ -80,6 +85,8 @@ public class SoundDbTableModel extends AbstractTableModel {
             case COLUMN_SOUNDSET:
                 return false;
             case COLUMN_SYNTH:
+                return false;
+            case COLUMN_TS:
                 return false;
             default:
                 throw new IllegalArgumentException("Invalid column index");
@@ -105,6 +112,9 @@ public class SoundDbTableModel extends AbstractTableModel {
                 break;
             case COLUMN_SYNTH:
                 returnValue = sound.getSynthFactory().getSynthId();
+                break;
+            case COLUMN_TS:
+                returnValue = SoundMeta.getTimestamp(sound, NULL_TS);
                 break;
             default:
                 throw new IllegalArgumentException("Invalid column index");
@@ -134,6 +144,12 @@ public class SoundDbTableModel extends AbstractTableModel {
     public void deleteSound(Sound sound) {
         listSounds.remove(sound);
         soundDbModel.deleteSound(sound);
+        fireTableDataChanged();
+    }
+
+    public void addSound(Sound sound) {
+        soundDbModel.insertOneSound(sound);
+        listSounds.add(sound);
         fireTableDataChanged();
     }
 

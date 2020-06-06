@@ -61,12 +61,6 @@ public class PeakSound extends AbstractSound implements SingleSound {
     }
 
     @Override
-    protected String getNameImp() {
-        byte[] msg = getSysEx().getMessage();
-        return new String(msg, NAME_OFFSET, NAME_LENGTH);
-    }
-
-    @Override
     protected int getNameOffset() {
         return NAME_OFFSET;
     }

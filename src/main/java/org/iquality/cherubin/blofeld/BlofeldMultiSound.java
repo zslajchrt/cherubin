@@ -69,12 +69,6 @@ public class BlofeldMultiSound extends AbstractSound implements MultiSound, Blof
     }
 
     @Override
-    protected String getNameImp() {
-        byte[] msg = getSysEx().getMessage();
-        return new String(msg, MULTI_NAME_OFFSET, NAME_LENGTH);
-    }
-
-    @Override
     protected int getNameOffset() {
         return MULTI_NAME_OFFSET;
     }

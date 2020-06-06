@@ -32,12 +32,6 @@ public class BlofeldSingleSound extends AbstractSound implements BlofeldSoundCom
     }
 
     @Override
-    protected String getNameImp() {
-        byte[] msg = getSysEx().getMessage();
-        return new String(msg, SINGLE_NAME_OFFSET, NAME_LENGTH);
-    }
-
-    @Override
     protected int getNameOffset() {
         return SINGLE_NAME_OFFSET;
     }

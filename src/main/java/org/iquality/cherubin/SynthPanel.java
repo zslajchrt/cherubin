@@ -1,14 +1,21 @@
 package org.iquality.cherubin;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.iquality.cherubin.SoundDbPanel.SOUND_DB_FLAVOR;
+import static org.iquality.cherubin.SoundDbPanel.soundClipboardFlavors;
 
 public class SynthPanel extends JPanel implements AppExtension {
 
@@ -21,6 +28,7 @@ public class SynthPanel extends JPanel implements AppExtension {
     private final EditedSoundStatus editedSoundStatus;
 
     private final PasteAction pasteAction;
+    private final CopyAction copyAction;
 
     private boolean isSelected;
 
@@ -35,6 +43,7 @@ public class SynthPanel extends JPanel implements AppExtension {
         buildBankTabs();
 
         pasteAction = new PasteAction();
+        copyAction = new CopyAction();
     }
 
     private void buildBankTabs() {
@@ -260,6 +269,11 @@ public class SynthPanel extends JPanel implements AppExtension {
         return pasteAction;
     }
 
+    @Override
+    public Action getCopyAction() {
+        return copyAction;
+    }
+
     private class SynthPanelSoundEditorModelListener implements SoundEditorModel.SoundEditorModelListener {
         @Override
         public void editedSoundSelected(Sound sound) {
@@ -285,6 +299,48 @@ public class SynthPanel extends JPanel implements AppExtension {
 
         @Override
         public void editedSoundCleared(Sound sound) {
+        }
+    }
+
+    private class CopyAction extends AbstractAction {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Clipboard clipboard = getSystemClipboard();
+            clipboard.setContents(new Transferable() {
+                @Override
+                public DataFlavor[] getTransferDataFlavors() {
+                    return soundClipboardFlavors;
+                }
+
+                @Override
+                public boolean isDataFlavorSupported(DataFlavor flavor) {
+                    for (DataFlavor soundClipboardFlavor : soundClipboardFlavors) {
+                        if (soundClipboardFlavor.equals(flavor)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                @Override
+                public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+                    int selectedTabIndex = tabbedPane.getSelectedIndex();
+                    JTable table = tabTables.get(selectedTabIndex);
+                    int row = table.getSelectedRow();
+                    if (row < 0) {
+                        return null; // TODO
+                    }
+                    Sound sound = (Sound) table.getValueAt(row, SoundDbTableModel.COLUMN_NAME);
+
+                    if (DataFlavor.stringFlavor.equals(flavor)) {
+                        return sound.toString();
+                    } else if (SOUND_DB_FLAVOR.equals(flavor)) {
+                        return sound.clone();
+                    } else {
+                        throw new UnsupportedFlavorException(flavor);
+                    }
+                }
+            }, null);
         }
     }
 

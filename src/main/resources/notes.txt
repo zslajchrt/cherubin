@@ -1,5 +1,9 @@
 
 Missing features:
+* Add addition time to SoundDb patches
+* Copy a patch from a virtual synth to the sound db (a typical use case: having open a vsynth, a patch is dumped from a real synth to the vsynth. If the sound is found useful, it can be stored to the sound db and used in other vsynths)
+* A parameter overview of a patch (esp. for BS2)
+* Support BS2 overlay + tuning tables sysex
 * Display synth model name, frame title
 * Listen to dump: indicate which MIDI inputs are used for listening (also w.r.t. alternatives, when pressed a key combination), status bar
 * Remember last folders for dialogos
@@ -21,10 +25,9 @@ Features:
 * Monitor checkbox
 * Proxy
 * Panic button, All notes off
-* MIDI traffic indicators for all inputs/outputs (horizontal LEDs in the status bar)
+* MIDI traffic indicators for all inputs/outputs (horizontal LEDs in the status bar) when SHIFT pressed
 * (!) Show actual MIDI Input/Output for key modifiers being pressed
 	* Also do it for "Listen to dump" (by a tooltip)
-
-
-
-
+* Distinguish a real EMPTY slot from ones named EMPTY	
+* Silent selection of edited sound (Ctrl-Enter)
+* Copy-Paste can be used in SoundDb panel to create sound copies

@@ -12,7 +12,8 @@ import java.util.function.Supplier;
 
 public class SoundEditorModel {
 
-    private static final Object SEND_SOUND = "sendSound";
+    private static final Object SELECT_SOUND_AND_PLAY = "selectSoundAndPlay";
+    private static final Object SELECT_SOUND = "selectSound";
 
     private final MidiServices midiServices;
 
@@ -263,10 +264,20 @@ public class SoundEditorModel {
             }
         });
 
+        KeyStroke ctrlEnter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK);
+        table.getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(ctrlEnter, SELECT_SOUND);
+        table.getActionMap().put(SELECT_SOUND, new SendSoundAction(table, soundEditorTable.getSoundColumn()) {
+            @Override
+            protected void onSound(Sound sound, int outputVariant, boolean on) {
+                if (on) {
+                    SoundEditorModel.this.setEditedSound(sound);
+                }
+            }
+        });
 
         KeyStroke enter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0);
-        table.getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(enter, SEND_SOUND);
-        table.getActionMap().put(SEND_SOUND, new SendSoundAction(table, soundEditorTable.getSoundColumn()) {
+        table.getInputMap(JTable.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(enter, SELECT_SOUND_AND_PLAY);
+        table.getActionMap().put(SELECT_SOUND_AND_PLAY, new SendSoundAction(table, soundEditorTable.getSoundColumn()) {
             @Override
             protected void onSound(Sound sound, int outputVariant, boolean on) {
                 if (on) {
