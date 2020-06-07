@@ -212,6 +212,13 @@ public class SequencePanel extends JPanel implements AppExtension {
 
         @Override
         public void actionPerformed(ActionEvent e) {
+            SequenceTable sequenceTable = tabTables.get(tabbedPane.getSelectedIndex());
+
+            List<MidiEvent> events = sequenceTable.getSelectedEvents();
+            if (events == null) {
+                return;
+            }
+
             Clipboard clipboard = getSystemClipboard();
             clipboard.setContents(new Transferable() {
                 @Override
@@ -231,11 +238,6 @@ public class SequencePanel extends JPanel implements AppExtension {
 
                 @Override
                 public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
-                    SequenceTable sequenceTable = tabTables.get(tabbedPane.getSelectedIndex());
-
-                    List<MidiEvent> events = sequenceTable.getSelectedEvents();
-                    if (events == null) return null;
-
                     if (MIDI_EVENTS_FLAVOR.equals(flavor)) {
                         return new MidiEvents(events);
                     } else {

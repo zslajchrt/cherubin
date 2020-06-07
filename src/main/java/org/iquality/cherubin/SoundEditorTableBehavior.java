@@ -13,4 +13,10 @@ public interface SoundEditorTableBehavior {
     boolean isActive();
 
     void deleteSound(int row);
+
+    void updateSound(Sound sound);
+
+    default void configurePopUpMenu(JPopupMenu popupMenu) {
+    }
+
 }

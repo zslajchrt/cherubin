@@ -73,6 +73,10 @@ public class SequenceTable extends JTable {
         });
 
 
+        setupPopupMenu();
+    }
+
+    private void setupPopupMenu() {
         JPopupMenu popupMenu = new JPopupMenu();
 
         HexViewAction hexViewAction = new HexViewAction();

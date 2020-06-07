@@ -1,5 +1,7 @@
 package org.iquality.cherubin;
 
+import com.sun.codemodel.internal.JOp;
+
 import javax.sound.midi.*;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -316,6 +318,37 @@ public class SoundEditorModel {
             }
         });
 
-    }
+        // popup menu
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem editNoteItem = new JMenuItem(new AbstractAction("Edit note") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int row = table.getSelectedRow();
+                if (row < 0) {
+                    return;
+                }
+                Sound sound = (Sound) table.getValueAt(row, soundEditorTable.getSoundColumn());
+                String note = SoundMeta.getNote(sound, "aaaa\nbbb\nccc\n");
 
+                JTextArea textArea = new JTextArea(note);
+                textArea.setColumns(30);
+                textArea.setRows(10);
+                textArea.setLineWrap(true);
+                textArea.setWrapStyleWord(true);
+                textArea.setSize(textArea.getPreferredSize().width, textArea.getPreferredSize().height);
+                int ret = JOptionPane.showConfirmDialog(null, new JScrollPane(textArea), "Note on Sound", JOptionPane.OK_CANCEL_OPTION);
+                if (ret == JOptionPane.OK_OPTION) {
+                    String updatedNote = textArea.getText();
+                    SoundMeta.getOrCreate(sound).setNote(updatedNote);
+                    soundEditorTable.updateSound(sound);
+                } else {
+                    // cancelled
+                }
+            }
+        });
+        popupMenu.add(editNoteItem);
+
+        soundEditorTable.configurePopUpMenu(popupMenu);
+        table.setComponentPopupMenu(popupMenu);
+    }
 }

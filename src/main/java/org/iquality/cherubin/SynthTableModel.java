@@ -9,8 +9,9 @@ public class SynthTableModel extends AbstractTableModel implements SynthModel.Sy
     public static final int COLUMN_CATEGORY = 2;
     public static final int COLUMN_SOUNDSET = 3;
     public static final int COLUMN_REFID = 4;
+    public static final int COLUMN_NOTE = 5;
 
-    private final String[] columnNames = {"Slot", "Name", "Category", "SoundSet", "RefId"};
+    private final String[] columnNames = {"Slot", "Name", "Category", "SoundSet", "RefId", "Note"};
 
     private final int bankNum;
 
@@ -60,6 +61,9 @@ public class SynthTableModel extends AbstractTableModel implements SynthModel.Sy
             case COLUMN_REFID:
                 returnCls = Integer.class;
                 break;
+            case COLUMN_NOTE:
+                returnCls = Boolean.class;
+                break;
             default:
                 throw new IllegalArgumentException("Invalid column index");
         }
@@ -86,6 +90,10 @@ public class SynthTableModel extends AbstractTableModel implements SynthModel.Sy
             case COLUMN_REFID:
                 returnValue = sound.getId();
                 break;
+            case COLUMN_NOTE:
+                String note = SoundMeta.getNote(sound, null);
+                returnValue = note != null;
+                break;
             default:
                 throw new IllegalArgumentException("Invalid column index");
         }
@@ -94,14 +102,10 @@ public class SynthTableModel extends AbstractTableModel implements SynthModel.Sy
 
     public boolean isCellEditable(int rowIndex, int columnIndex) {
         switch (columnIndex) {
-            case COLUMN_SLOT:
-                return false;
             case COLUMN_NAME:
                 return true;
             case COLUMN_CATEGORY:
                 return true;
-            case COLUMN_SOUNDSET:
-                return false;
             default:
                 return false;
         }
@@ -118,12 +122,12 @@ public class SynthTableModel extends AbstractTableModel implements SynthModel.Sy
             case COLUMN_NAME:
                 sound = getBank().get(rowIndex);
                 sound.setName((String) value);
-                synthModel.updateSound(sound);
+                //synthModel.updateSound(sound);
                 break;
             case COLUMN_CATEGORY:
                 sound = getBank().get(rowIndex);
                 sound.setCategory((SoundCategory) value);
-                synthModel.updateSound(sound);
+                //synthModel.updateSound(sound);
                 break;
             default:
                 break;

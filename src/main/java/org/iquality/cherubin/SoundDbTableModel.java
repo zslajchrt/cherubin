@@ -16,11 +16,12 @@ public class SoundDbTableModel extends AbstractTableModel {
     public static final int COLUMN_CATEGORY = 2;
     public static final int COLUMN_SOUNDSET = 3;
     public static final int COLUMN_SYNTH = 4;
-    public static final int COLUMN_TS = 5;
+    public static final int COLUMN_CREATED = 5;
+    public static final int COLUMN_NOTE = 6;
     public static final Timestamp NULL_TS = new Timestamp(0);
 
     private final SoundDbModel soundDbModel;
-    private final String[] columnNames = {"Id", "Name", "Category", "Sound Set", "Synth", "Timestamp"};
+    private final String[] columnNames = {"Id", "Name", "Category", "Sound Set", "Synth", "Created", "Note"};
     private List<Sound> listSounds;
     private Predicate<Sound> synthFilter = s -> true;
     private Predicate<Sound> categoryFilter = s -> true;
@@ -67,8 +68,10 @@ public class SoundDbTableModel extends AbstractTableModel {
                 return String.class;
             case COLUMN_SYNTH:
                 return String.class;
-            case COLUMN_TS:
+            case COLUMN_CREATED:
                 return Timestamp.class;
+            case COLUMN_NOTE:
+                return Boolean.class;
             default:
                 throw new IllegalArgumentException("Invalid column index");
         }
@@ -86,7 +89,9 @@ public class SoundDbTableModel extends AbstractTableModel {
                 return false;
             case COLUMN_SYNTH:
                 return false;
-            case COLUMN_TS:
+            case COLUMN_CREATED:
+                return false;
+            case COLUMN_NOTE:
                 return false;
             default:
                 throw new IllegalArgumentException("Invalid column index");
@@ -113,8 +118,12 @@ public class SoundDbTableModel extends AbstractTableModel {
             case COLUMN_SYNTH:
                 returnValue = sound.getSynthFactory().getSynthId();
                 break;
-            case COLUMN_TS:
-                returnValue = SoundMeta.getTimestamp(sound, NULL_TS);
+            case COLUMN_CREATED:
+                returnValue = SoundMeta.getCreated(sound, NULL_TS);
+                break;
+            case COLUMN_NOTE:
+                String note = SoundMeta.getNote(sound, null);
+                returnValue = note != null;
                 break;
             default:
                 throw new IllegalArgumentException("Invalid column index");
@@ -139,6 +148,11 @@ public class SoundDbTableModel extends AbstractTableModel {
             default:
                 break;
         }
+    }
+
+    public void updateSound(Sound sound) {
+        soundDbModel.updateSound(sound);
+        fireTableDataChanged();
     }
 
     public void deleteSound(Sound sound) {

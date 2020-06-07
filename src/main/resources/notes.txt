@@ -1,7 +1,8 @@
 
 Missing features:
-* Add addition time to SoundDb patches
-* Copy a patch from a virtual synth to the sound db (a typical use case: having open a vsynth, a patch is dumped from a real synth to the vsynth. If the sound is found useful, it can be stored to the sound db and used in other vsynths)
+* Indicate by a color a modified sound in vsynt (modified via dump, e.g.). The indication goes off when vsynth is saved.
+* Remove the sound-set concept and use tags instead
+* Allow deleting multiple selected sounds from SoundDB
 * A parameter overview of a patch (esp. for BS2)
 * Support BS2 overlay + tuning tables sysex
 * Display synth model name, frame title
@@ -31,3 +32,6 @@ Features:
 * Distinguish a real EMPTY slot from ones named EMPTY	
 * Silent selection of edited sound (Ctrl-Enter)
 * Copy-Paste can be used in SoundDb panel to create sound copies
+* Add addition time to SoundDb patches
+* Copy a patch from a virtual synth to the sound db (a typical use case: having open a vsynth, a patch is dumped from a real synth to the vsynth. If the sound is found useful, it can be stored to the sound db and used in other vsynths)
+* Introduce notes via a pop-up menu, indicate the presence of a note in a column

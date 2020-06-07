@@ -305,6 +305,14 @@ public class SynthPanel extends JPanel implements AppExtension {
     private class CopyAction extends AbstractAction {
         @Override
         public void actionPerformed(ActionEvent e) {
+            int selectedTabIndex = tabbedPane.getSelectedIndex();
+            JTable table = tabTables.get(selectedTabIndex);
+            int row = table.getSelectedRow();
+            if (row < 0) {
+                return;
+            }
+            final Sound sound = ((Sound) table.getValueAt(row, SoundDbTableModel.COLUMN_NAME)).clone();
+
             Clipboard clipboard = getSystemClipboard();
             clipboard.setContents(new Transferable() {
                 @Override
@@ -324,18 +332,10 @@ public class SynthPanel extends JPanel implements AppExtension {
 
                 @Override
                 public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
-                    int selectedTabIndex = tabbedPane.getSelectedIndex();
-                    JTable table = tabTables.get(selectedTabIndex);
-                    int row = table.getSelectedRow();
-                    if (row < 0) {
-                        return null; // TODO
-                    }
-                    Sound sound = (Sound) table.getValueAt(row, SoundDbTableModel.COLUMN_NAME);
-
                     if (DataFlavor.stringFlavor.equals(flavor)) {
                         return sound.toString();
                     } else if (SOUND_DB_FLAVOR.equals(flavor)) {
-                        return sound.clone();
+                        return sound;
                     } else {
                         throw new UnsupportedFlavorException(flavor);
                     }
@@ -353,6 +353,7 @@ public class SynthPanel extends JPanel implements AppExtension {
                     return;
                 }
                 Sound sound = (Sound) clipboard.getData(SoundDbTable.VIRTUAL_SYNTH_SOUND_FLAVOR);
+                sound = sound.clone();
 
                 JTable selectedTab = tabTables.get(tabbedPane.getSelectedIndex());
                 if (selectedTab instanceof SynthBankTable) {
@@ -406,6 +407,10 @@ public class SynthPanel extends JPanel implements AppExtension {
             synthBankTable.getSelectionModel().setSelectionInterval(row, row);
             synthBankTable.getColumnModel().getSelectionModel().setSelectionInterval(savedColIndex, savedColIndex);
         }
+
+        @Override
+        public void updateSound(Sound sound) {
+        }
     }
 
     private class MultiSoundEditorTableBehavior implements SoundEditorTableBehavior {
@@ -443,6 +448,10 @@ public class SynthPanel extends JPanel implements AppExtension {
             synthMultiTableModel.deleteSound(row);
             synthMultiTable.getSelectionModel().setSelectionInterval(row, row);
             synthMultiTable.getColumnModel().getSelectionModel().setSelectionInterval(savedColIndex, savedColIndex);
+        }
+
+        @Override
+        public void updateSound(Sound sound) {
         }
     }
 }

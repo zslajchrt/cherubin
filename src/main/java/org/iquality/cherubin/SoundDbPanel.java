@@ -1,6 +1,5 @@
 package org.iquality.cherubin;
 
-import jdk.nashorn.internal.scripts.JO;
 import org.japura.gui.CheckComboBox;
 import org.japura.gui.event.ListCheckListener;
 import org.japura.gui.model.ListCheckModel;
@@ -70,6 +69,12 @@ public class SoundDbPanel extends JPanel implements AppExtension {
                     soundDbTable.getColumnModel().getSelectionModel().setSelectionInterval(savedColSelIndex, savedColSelIndex);
                 }
             }
+
+            @Override
+            public void updateSound(Sound sound) {
+                ((SoundDbTableModel) soundDbTable.getModel()).updateSound(sound);
+            }
+
         });
 
         add(soundDbTable.getTableHeader(), BorderLayout.PAGE_START);
@@ -234,6 +239,12 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
         @Override
         public void actionPerformed(ActionEvent e) {
+            int row = soundDbTable.getSelectedRow();
+            if (row < 0) {
+                return;
+            }
+            Sound sound = ((Sound) soundDbTable.getValueAt(row, SoundDbTableModel.COLUMN_NAME)).clone();
+
             Clipboard clipboard = getSystemClipboard();
             clipboard.setContents(new Transferable() {
                 @Override
@@ -253,16 +264,10 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
                 @Override
                 public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
-                    int row = soundDbTable.getSelectedRow();
-                    if (row < 0) {
-                        return null; // TODO
-                    }
-                    Sound sound = (Sound) soundDbTable.getValueAt(row, SoundDbTableModel.COLUMN_NAME);
-
                     if (DataFlavor.stringFlavor.equals(flavor)) {
                         return sound.toString();
                     } else if (SOUND_DB_FLAVOR.equals(flavor)) {
-                        return sound.clone();
+                        return sound;
                     } else {
                         throw new UnsupportedFlavorException(flavor);
                     }
@@ -289,7 +294,7 @@ public class SoundDbPanel extends JPanel implements AppExtension {
 
         private void handleSound(Clipboard clipboard) throws UnsupportedFlavorException, IOException {
             Sound sound = (Sound) clipboard.getData(SoundDbPanel.SOUND_DB_FLAVOR);
-            sound.appendToName("-Copy");
+            sound = sound.clone();
             soundDbTable.tableModel.addSound(sound);
 
             soundDbTable.selectSound(sound);

@@ -104,6 +104,7 @@ public class SynthModel extends SoundEditorModel {
         return soundDbModel.getSynthModels();
     }
 
+    
     public void updateSound(Sound sound) {
         if (sound instanceof SingleSound) {
             updateSingleSound((SingleSound) sound);

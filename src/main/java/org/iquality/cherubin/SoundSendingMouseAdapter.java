@@ -1,6 +1,7 @@
 package org.iquality.cherubin;
 
 import javax.swing.*;
+import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -17,19 +18,26 @@ public abstract class SoundSendingMouseAdapter<T> extends MouseAdapter {
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        if (e.getClickCount() == 2) {
-            JTable target = (JTable) e.getSource();
-            int row = target.getSelectedRow();
-            this.sound = getValueAt(row);
-            outputVariant = MidiDeviceManager.getOutputVariant(e);
+        if (e.getClickCount() == 2 && !e.isConsumed()) {
+            if ((e.getModifiers() & InputEvent.BUTTON1_MASK) == InputEvent.BUTTON1_MASK) {
+                e.consume();
 
-            sendSoundOn(sound, outputVariant);
+                JTable target = (JTable) e.getSource();
+                int row = target.getSelectedRow();
+                this.sound = getValueAt(row);
+                outputVariant = MidiDeviceManager.getOutputVariant(e);
+
+                sendSoundOn(sound, outputVariant);
+            }
         }
         if (e.getClickCount() == 1) {
-            if (sound != null) {
-                sendSoundOff(sound, outputVariant);
-                sound = null;
-                outputVariant = -1;
+            if ((e.getModifiers() & InputEvent.BUTTON1_MASK) == InputEvent.BUTTON1_MASK) {
+                if (sound != null) {
+                    e.consume();
+                    sendSoundOff(sound, outputVariant);
+                    sound = null;
+                    outputVariant = -1;
+                }
             }
         }
     }

@@ -5,6 +5,10 @@ import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiEvent;
 import javax.sound.midi.SysexMessage;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
 import java.sql.*;
 import java.util.*;
 
@@ -40,18 +44,18 @@ public class SoundDbModel extends SoundEditorModel {
 
         try {
             this.con = con;
-            insertSoundStm = con.prepareStatement("INSERT INTO SOUND (NAME, CATEGORY, SYSEX, SOUNDSET, TYPE, TS) VALUES (?, ?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
+            insertSoundStm = con.prepareStatement("INSERT INTO SOUND (NAME, CATEGORY, SYSEX, SOUNDSET, TYPE, CREATED, NOTE) VALUES (?, ?, ?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
             deleteSoundStm = con.prepareStatement("DELETE FROM SOUND WHERE ID = ?");
-            updateSoundStm = con.prepareStatement("UPDATE SOUND SET NAME=?, CATEGORY=?, SYSEX=?, SOUNDSET=? WHERE ID=?");
-            loadAllSoundStm = con.prepareStatement("SELECT ID, NAME, CATEGORY, SYSEX, SOUNDSET, TYPE, TS FROM SOUND");
+            updateSoundStm = con.prepareStatement("UPDATE SOUND SET NAME=?, CATEGORY=?, SYSEX=?, SOUNDSET=?, NOTE=? WHERE ID=?");
+            loadAllSoundStm = con.prepareStatement("SELECT ID, NAME, CATEGORY, SYSEX, SOUNDSET, TYPE, CREATED, NOTE FROM SOUND");
             synthInstancesStm = con.prepareStatement("SELECT ID, NAME, TYPE FROM SYNTH");
             loadSynthStm = con.prepareStatement("SELECT ID, TYPE FROM SYNTH WHERE NAME = ?");
-            loadBankStm = con.prepareStatement("SELECT SN.ID AS SOUND_ID, SLOT, SN.NAME AS SOUND_NAME, CATEGORY, SOUNDSET, SYSEX, SYNTH_ID FROM SYNTH_SOUND AS SN, SYNTH AS S WHERE S.NAME = ? AND SN.SYNTH_ID = S.ID AND SN.BANK = ?");
-            updateBankSoundStm = con.prepareStatement("UPDATE SYNTH_SOUND SET NAME=?, CATEGORY=?, SYSEX=?, SOUNDSET=? WHERE ID=?");
+            loadBankStm = con.prepareStatement("SELECT SN.ID AS SOUND_ID, SLOT, SN.NAME AS SOUND_NAME, CATEGORY, SOUNDSET, SYSEX, SYNTH_ID, SN.NOTE AS SOUND_NOTE, SN.CREATED AS SOUND_CREATED FROM SYNTH_SOUND AS SN, SYNTH AS S WHERE S.NAME = ? AND SN.SYNTH_ID = S.ID AND SN.BANK = ?");
+            updateBankSoundStm = con.prepareStatement("UPDATE SYNTH_SOUND SET NAME=?, CATEGORY=?, SYSEX=?, SOUNDSET=?, NOTE=? WHERE ID=?");
             deleteSynthStm = con.prepareStatement("DELETE FROM SYNTH WHERE ID = ?");
             deleteBanksStm = con.prepareStatement("DELETE FROM SYNTH_SOUND WHERE SYNTH_ID = ?");
-            insertSynthStm = con.prepareStatement("INSERT INTO SYNTH (NAME, TYPE) VALUES (?, ?)");
-            insertSynthSoundStm = con.prepareStatement("INSERT INTO SYNTH_SOUND (BANK, SLOT, NAME, CATEGORY, SOUNDSET, SYSEX, SYNTH_ID) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            insertSynthStm = con.prepareStatement("INSERT INTO SYNTH (NAME, TYPE, CREATED) VALUES (?, ?, ?)");
+            insertSynthSoundStm = con.prepareStatement("INSERT INTO SYNTH_SOUND (BANK, SLOT, NAME, CATEGORY, SOUNDSET, SYSEX, SYNTH_ID, CREATED, NOTE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
             loadSoundSets();
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -93,11 +97,15 @@ public class SoundDbModel extends SoundEditorModel {
             insertSynthStm.clearParameters();
             insertSynthStm.setString(1, name);
             insertSynthStm.setString(2, synthFactory.getSynthId());
+
+            Timestamp createdTs = new Timestamp(System.currentTimeMillis());
+            insertSynthStm.setTimestamp(3, createdTs);
+
             insertSynthStm.executeUpdate();
 
             return loadSynth(new SynthHeader(-1, name, synthFactory));
         } catch (Exception e) {
-            throw new RuntimeException();
+            throw new RuntimeException(e);
         }
     }
 
@@ -114,19 +122,38 @@ public class SoundDbModel extends SoundEditorModel {
                 byte[] sysExBytes = sysExBlob.getBytes(0, (int) sysExBlob.length());
                 String soundSetName = resultSet.getString(5);
                 String synthId = resultSet.getString(6);
-                Timestamp ts = resultSet.getTimestamp(7);
+                Timestamp created = resultSet.getTimestamp(7);
+
+                Reader noteReader = resultSet.getCharacterStream(8);
+                String note = null;
+                if (noteReader != null) {
+                    note = readLines(noteReader);
+                }
 
                 SynthFactory synthFactory = getSoundFactory(synthId);
                 Sound sound = synthFactory.createOneSound(id, name, new SysexMessage(sysExBytes, sysExBytes.length), category, soundSetName);
                 // Metadata
-                SoundMeta soundMeta = new SoundMeta();
-                soundMeta.setTimestamp(ts);
+                SoundMeta soundMeta = SoundMeta.getOrCreate(sound);
+                soundMeta.setCreated(created);
+                if (note != null) {
+                    soundMeta.setNote(note);
+                }
 
                 SoundSet<Sound> soundSet = soundSetsMap.computeIfAbsent(soundSetName, SoundSet::new);
                 soundSet.sounds.add(sound);
                 sounds.add(sound);
             }
         } catch (SQLException | InvalidMidiDataException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String readLines(Reader noteReader) {
+        try (BufferedReader buffer = new BufferedReader(noteReader)) {
+            StringBuilder sb = new StringBuilder();
+            buffer.lines().forEach(ln -> sb.append(ln).append('\n'));
+            return sb.toString();
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -166,6 +193,13 @@ public class SoundDbModel extends SoundEditorModel {
                 ByteInputStream sysExStream = new ByteInputStream(sysEx, sysEx.length);
                 insertSynthSoundStm.setBinaryStream(6, sysExStream);
                 insertSynthSoundStm.setInt(7, synth.getId());
+
+                Timestamp createdTs = SoundMeta.getCreated(sound, new Timestamp(System.currentTimeMillis()));
+                insertSynthSoundStm.setTimestamp(8, createdTs);
+
+                String note = SoundMeta.getNote(sound, null);
+                Reader noteReader = note == null ? null : new StringReader(note);
+                insertSynthSoundStm.setCharacterStream(9, noteReader);
 
                 insertSynthSoundStm.executeUpdate();
             }
@@ -226,7 +260,23 @@ public class SoundDbModel extends SoundEditorModel {
                 byte[] sysExBytes = sysExBlob.getBytes(0, (int) sysExBlob.length());
                 String soundSetName = resultSet.getString("SOUNDSET");
 
+                Timestamp created = resultSet.getTimestamp("SOUND_CREATED");
+
+                Reader noteReader = resultSet.getCharacterStream("SOUND_NOTE");
+                String note = null;
+                if (noteReader != null) {
+                    note = readLines(noteReader);
+                }
+
                 Sound sound = synthFactory.createOneSound(soundId, soundName, new SysexMessage(sysExBytes, sysExBytes.length), category, soundSetName).clone(bankNum, slot);
+
+                // metadata
+                SoundMeta soundMeta = SoundMeta.getOrCreate(sound);
+                soundMeta.setCreated(created);
+                if (note != null) {
+                    soundMeta.setNote(note);
+                }
+
                 bank.set(slot, sound);
             }
 
@@ -296,8 +346,17 @@ public class SoundDbModel extends SoundEditorModel {
         insertSoundStm.setString(4, sound.getSoundSetName());
         insertSoundStm.setString(5, sound.getSynthFactory().getSynthId());
 
-        Timestamp ts = new Timestamp(System.currentTimeMillis());
-        insertSoundStm.setTimestamp(6, ts);
+        // Metadata
+        Timestamp createdTs = SoundMeta.getCreated(sound, new Timestamp(System.currentTimeMillis()));
+        insertSoundStm.setTimestamp(6, createdTs);
+
+        SoundMeta soundMeta = SoundMeta.getOrCreate(sound);
+        soundMeta.setCreated(createdTs);
+
+        String note = soundMeta.getNote();
+        Reader noteReader = note == null ? null : new StringReader(note);
+        insertSoundStm.setCharacterStream(7, noteReader);
+
         int insertedRows = insertSoundStm.executeUpdate();
 
         if (insertedRows == 0) {
@@ -312,11 +371,6 @@ public class SoundDbModel extends SoundEditorModel {
                 throw new SQLException("Creating sound failed, no ID obtained.");
             }
         }
-
-        // Metadata
-        SoundMeta soundMeta = new SoundMeta();
-        soundMeta.setTimestamp(ts);
-        sound.setCustomData(SoundMeta.class, soundMeta);
     }
 
     public void deleteSound(Sound sound) {
@@ -358,7 +412,12 @@ public class SoundDbModel extends SoundEditorModel {
             ByteInputStream sysExStream = new ByteInputStream(sysEx, sysEx.length);
             stm.setBinaryStream(3, sysExStream);
             stm.setString(4, sound.getSoundSetName());
-            stm.setInt(5, sound.getId());
+
+            String note = SoundMeta.getNote(sound, null);
+            Reader noteReader = note == null ? null : new StringReader(note);
+            stm.setCharacterStream(5, noteReader);
+
+            stm.setInt(6, sound.getId());
             stm.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
